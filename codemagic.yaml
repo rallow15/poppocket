@@ -16,11 +16,21 @@ workflows:
       vars:
         XCODE_PROJECT: Builds/iOS/XcodeProject/Unity-iPhone.xcodeproj
     scripts:
-      - name: Récupère les gros fichiers (Git LFS, libiPhone-lib.a)
-        script: git lfs pull || true
+      # IMPORTANT : set -e = en cas d'erreur, STOP. Sans ça, Codemagic
+      # continue après un échec et fabrique des ipa vides (166 octets !).
+      - name: Telecharge les gros fichiers Git LFS (OBLIGATOIRE)
+        script: |
+          set -e
+          cd $CM_BUILD_DIR
+          git lfs pull
+          ls -la Builds/iOS/XcodeProject/Libraries/
+          # Le vrai libiPhone-lib.a fait 229 Mo. Si c'est encore un
+          # pointeur (~150 octets), git lfs a raté → on STOPPE tout.
+          test "$(stat -f %z Builds/iOS/XcodeProject/Libraries/libiPhone-lib.a)" -gt 100000000
 
       - name: Assemble l'application (sans signature)
         script: |
+          set -e
           cd $CM_BUILD_DIR
           xcodebuild -project "$XCODE_PROJECT" \
             -scheme Unity-iPhone \
@@ -28,13 +38,22 @@ workflows:
             -derivedDataPath Builds/iOS/XcodeProject/build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
 
-      - name: Fabrique l'IPA
+      - name: Fabrique l'IPA (avec verifications)
         script: |
+          set -e
           cd $CM_BUILD_DIR
-          mkdir -p Payload
-          cp -R "Builds/iOS/XcodeProject/build/Build/Products/Release-iphoneos/Unity-iPhone.app" Payload/
+          APP_DIR="Builds/iOS/XcodeProject/build/Build/Products/Release-iphoneos/Unity-iPhone.app"
+          if [ ! -d "$APP_DIR" ]; then
+            echo "ERREUR : l'app n'a pas été produite — regarde le log xcodebuild au-dessus"
+            exit 1
+          fi
+          du -sh "$APP_DIR"
+          rm -rf Payload PopPocket.ipa
+          mkdir Payload
+          cp -R "$APP_DIR" Payload/
           zip -r PopPocket.ipa Payload
           ls -la PopPocket.ipa
+          echo "IPA PRETE ✔"
 
     artifacts:
       - PopPocket.ipa
