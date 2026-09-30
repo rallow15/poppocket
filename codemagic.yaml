@@ -16,7 +16,7 @@ workflows:
       vars:
         XCODE_PROJECT: Builds/iOS/XcodeProject/Unity-iPhone.xcodeproj
     scripts:
-      - name: Récupère les gros fichiers (Git LFS : libiPhone-lib.a)
+      - name: Récupère les gros fichiers (Git LFS, libiPhone-lib.a)
         script: git lfs pull || true
 
       - name: Assemble l'application (sans signature)
