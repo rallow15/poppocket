@@ -42,11 +42,14 @@ workflows:
         script: |
           set -e
           cd $CM_BUILD_DIR
-          APP_DIR="Builds/iOS/XcodeProject/build/Build/Products/Release-iphoneos/Unity-iPhone.app"
-          if [ ! -d "$APP_DIR" ]; then
+          # L'app s'appelle PopPocket.app (nom du produit Unity) — on la
+          # trouve automatiquement, peu importe son nom :
+          APP_DIR="$(ls -d Builds/iOS/XcodeProject/build/Build/Products/Release-iphoneos/*.app | head -1)"
+          if [ -z "$APP_DIR" ]; then
             echo "ERREUR : l'app n'a pas été produite — regarde le log xcodebuild au-dessus"
             exit 1
           fi
+          echo "APP TROUVÉE : $APP_DIR"
           du -sh "$APP_DIR"
           rm -rf Payload PopPocket.ipa
           mkdir Payload
