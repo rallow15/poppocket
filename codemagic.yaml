@@ -36,6 +36,5 @@ workflows:
           zip -r PopPocket.ipa Payload
           ls -la PopPocket.ipa
 
-    publishing:
-      artifacts:
-        - PopPocket.ipa
+    artifacts:
+      - PopPocket.ipa
