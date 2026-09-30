@@ -63,6 +63,9 @@ public static class GameUpgradeInstaller
         return spawner != null ? spawner.arenaSize.x * 0.5f : 14f;
     }
 
+    /// <summary>Demi-taille de l'arène, lisible par les autres installers.</summary>
+    internal static float ArenaHalfForDecor() => ArenaHalf();
+
     // ────────────────────────────────────────────────────────────────
     //  1. LE VILLAGE : MAISONS AUTOUR DE L'ARÈNE
     // ────────────────────────────────────────────────────────────────

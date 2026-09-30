@@ -1,9 +1,10 @@
 using UnityEngine;
 
 /// <summary>
-/// Petit animal décoratif qui se balade tranquillement autour de l'arène
-/// (il ne rentre JAMAIS dedans : il reste sur un anneau autour du terrain).
-/// Il marche, tourne doucement vers sa destination et fait un petit "trotte".
+/// Petit animal décoratif qui se balade tranquillement autour de l'arène.
+/// IL NE RENTRE JAMAIS DANS L'ARÈNE : il se déplace EN CONTORNANT le terrain
+/// (mouvement "en arc" sur son anneau, jamais en ligne droite à travers).
+/// Un Animator est optionnel : s'il en a un, on lance l'animation de marche.
 /// Aucun collider : décor pur, ça peut ralentir personne.
 /// </summary>
 public class Wanderer : MonoBehaviour
@@ -22,44 +23,78 @@ public class Wanderer : MonoBehaviour
     [Tooltip("Vitesse du trottement")]
     public float bobSpeed = 7f;
 
-    private Vector3 targetPos;
+    // Position de l'animal sur l'anneau en "polaire" :
+    // angle (radians) + rayon. On bouge l'angle OU le rayon, jamais à travers.
+    private float angle;
+    private float radius;
+    private float targetAngle;
+    private float targetRadius;
     private float baseY;
+    private Vector3 lastPos;
+    private Animator animator;
 
     private void Start()
     {
         baseY = transform.position.y;
+
+        // Départ sur l'anneau (sécurité : on ne peut JAMAIS être dedans)
+        angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+        radius = Random.Range(ringRadius.x, ringRadius.y);
+        PlaceOnRing(angle, radius);
+
+        // S'il a un Animator avec une animation de marche : on la lance
+        animator = GetComponentInChildren<Animator>();
+        if (animator != null) animator.Play(0, 0, Random.Range(0f, 1f));
+
         Pick();
     }
 
     private void Pick()
     {
-        float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-        float r = Random.Range(ringRadius.x, ringRadius.y);
-        targetPos = new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
+        // Nouvelle destination : un autre point du MÊME anneau
+        targetAngle = angle + Random.Range(30f, 210f) * Mathf.Deg2Rad * (Random.value < 0.5f ? -1f : 1f);
+        targetRadius = Random.Range(ringRadius.x, ringRadius.y);
     }
 
     private void Update()
     {
-        Vector3 to = targetPos - transform.position;
-        to.y = 0f;
+        // ── Angle : on tourne le long de l'arc (jamais en ligne droite à travers)
+        float angDiff = Mathf.DeltaAngle(angle * Mathf.Rad2Deg, targetAngle * Mathf.Rad2Deg) * Mathf.Deg2Rad;
+        float angSpeed = speed / Mathf.Max(radius, 1f);   // rad/s pour la vitesse donnée
+        float angStep = Mathf.Clamp(angDiff, -angSpeed * Time.deltaTime, angSpeed * Time.deltaTime);
+        angle += angStep;
 
-        if (to.sqrMagnitude < 0.4f)
+        // ── Rayon : on glisse doucement vers le rayon voulu (toujours hors arène)
+        float rDiff = targetRadius - radius;
+        float maxRStep = speed * Time.deltaTime;
+        radius += Mathf.Clamp(rDiff, -maxRStep, maxRStep);
+
+        PlaceOnRing(angle, radius);
+
+        // ── Regarde où il va (sens du déplacement réel)
+        Vector3 dir = transform.position - lastPos;
+        if (dir.sqrMagnitude > 0.0000001f)
         {
-            Pick();   // arrivé : nouvelle destination
-            return;
+            dir.y = 0f;
+            Quaternion wanted = Quaternion.LookRotation(dir.normalized, Vector3.up);
+            transform.rotation = Quaternion.Slerp(transform.rotation, wanted, Time.deltaTime * 5f);
         }
 
-        Vector3 dir = to.normalized;
-        transform.position += dir * (speed * Time.deltaTime);
-
-        // Tourne doucement vers la direction de marche
-        Quaternion wanted = Quaternion.LookRotation(dir, Vector3.up);
-        transform.rotation = Quaternion.Slerp(transform.rotation, wanted,
-                                              Time.deltaTime * 4f);
-
-        // Petit trottement (le corps monte et descend)
+        // ── Petit trottement (le corps monte et descend)
         Vector3 p = transform.position;
         p.y = baseY + Mathf.Sin(Time.time * bobSpeed + p.x) * bobAmplitude;
         transform.position = p;
+
+        // ── Destination atteinte (angle ET rayon) : on choisit la suivante
+        if (Mathf.Abs(angDiff) < 0.03f && Mathf.Abs(rDiff) < 0.05f) Pick();
+
+        lastPos = transform.position;
+    }
+
+    /// <summary>Place l'animal exactement sur son anneau, à l'angle/rayon donnés.</summary>
+    private void PlaceOnRing(float ang, float r)
+    {
+        transform.position = new Vector3(Mathf.Cos(ang) * r, transform.position.y,
+                                         Mathf.Sin(ang) * r);
     }
 }
