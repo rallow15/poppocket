@@ -9,9 +9,9 @@ using System.Collections.Generic;
 /// (Garage / Station-service / Station) tout autour de l'environnement,
 /// JAMAIS sur l'arène. Remplace les maisons-cubes ("MaisonsVillage").
 ///
-/// Les matériaux du pack sont en shaders Built-in (vieille version) :
-/// ils deviendraient ROSES en URP → ce script les convertit tout seuls
-/// en URP/Lit (couleur + texture + transparence gardées). Idempotent.
+/// Les matériaux du pack peuvent porter un shader absent du projet
+/// (URP ici absent) → ROSE. `UrpMaterialConverter` répare tout seul
+/// chaque matériau en le rebranchant sur le shader du projet. Idempotent.
 /// </summary>
 [InitializeOnLoad]
 public static class BuildingsPackInstaller
@@ -29,8 +29,18 @@ public static class BuildingsPackInstaller
         if (EditorApplication.isPlaying) return;
         if (GameUpgradeInstaller.EnsureGameSceneOpen()) return;
 
-        // Déjà installé ? (racine "Batiments" posée une fois pour toutes)
-        if (GameObject.Find("Batiments") != null) return;
+        // Déjà installé ? On vérifie juste que leurs matériaux ne sont pas roses.
+        var existingBat = GameObject.Find("Batiments");
+        if (existingBat != null)
+        {
+            if (UrpMaterialConverter.Convert(existingBat))
+            {
+                EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+                EditorSceneManager.SaveOpenScenes();
+                Debug.Log("[BATIMENTS-URP] Matériaux des bâtiments réparés ✔ (plus de rose !)");
+            }
+            return;
+        }
 
         List<GameObject> models = FindBuildingPrefabs();
         if (models.Count == 0)
@@ -100,7 +110,7 @@ public static class BuildingsPackInstaller
             foreach (Collider col in go.GetComponentsInChildren<Collider>(true))
                 Object.DestroyImmediate(col);
 
-            // Matériaux du pack (shaders vieille version) → convertis en URP
+            // Matériaux du pack : on répare tout shader rose
             UrpMaterialConverter.Convert(go);
 
             placed++;

@@ -39,13 +39,13 @@ public static class AnimalsPackInstaller
         GameObject existing = GameObject.Find("Animaux");
         if (existing != null && existing.GetComponentInChildren<Animator>(true) != null)
         {
-            // Animaux du pack déjà posés : il ne reste qu'à convertir les
-            // matériaux en URP si le pack était en shaders Built-in (ROSE).
+            // Animaux du pack déjà posés : on ne fait que réparer les
+            // matériaux roses (shader absent du projet).
             if (UrpMaterialConverter.Convert(existing))
             {
                 EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
                 EditorSceneManager.SaveOpenScenes();
-                Debug.Log("[ANIMAUX-URP] Matériaux des animaux convertis en URP ✔ (plus de rose !)");
+                Debug.Log("[ANIMAUX-URP] Matériaux des animaux réparés ✔ (plus de rose !)");
             }
             return;
         }
@@ -109,7 +109,7 @@ public static class AnimalsPackInstaller
             // Décor pur : aucun collider (jamais en travers d'un slime)
             StripColliders(animal);
 
-            // Shaders Built-in du pack → URP (sinon tout est rose)
+            // On répare tout shader rose du pack (shader absent du projet)
             UrpMaterialConverter.Convert(animal);
 
             // Animation de marche en boucle
