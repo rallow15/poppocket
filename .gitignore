@@ -1,0 +1,18 @@
+# Unity — dossiers de cache générés (lourds, régénérés tout seuls)
+Library/
+Temp/
+Logs/
+obj/
+UserSettings/
+
+# Builds — on garde UNIQUEMENT le projet Xcode iOS (pour Codemagic)
+Builds/*
+!Builds/iOS
+Builds/iOS/*
+!Builds/iOS/XcodeProject
+Builds/iOS/XcodeProject/build/
+
+# macOS de Codemagic
+*.ipa
+Payload/
+.DS_Store

@@ -1,0 +1,41 @@
+# Pop Pocket: Slime & Fidgets — build dans le CLOUD avec Codemagic
+# (même principe que perfect-time-expo : ce fichier pilote le build,
+#  il n'y a rien à faire sur le PC, juste cliquer sur "Start new build")
+#
+# Pourquoi iOS marche ici : Unity (sur le PC) a déjà fabriqué le projet
+# Xcode, commité dans Builds/iOS/XcodeProject. Le Mac de Codemagic n'a
+# plus qu'à l'assembler en .ipa — sans compte Apple Developer
+# (CODE_SIGNING_ALLOWED=NO → l'ipa se signe ensuite avec AltStore/Sideloadly).
+
+workflows:
+  ios-workflow:
+    name: PopPocket iOS — IPA
+    max_build_duration: 120
+    environment:
+      xcode: latest
+      vars:
+        XCODE_PROJECT: Builds/iOS/XcodeProject/Unity-iPhone.xcodeproj
+    scripts:
+      - name: Récupère les gros fichiers (Git LFS : libiPhone-lib.a)
+        script: git lfs pull || true
+
+      - name: Assemble l'application (sans signature)
+        script: |
+          cd $CM_BUILD_DIR
+          xcodebuild -project "$XCODE_PROJECT" \
+            -scheme Unity-iPhone \
+            -sdk iphoneos -configuration Release \
+            -derivedDataPath Builds/iOS/XcodeProject/build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: Fabrique l'IPA
+        script: |
+          cd $CM_BUILD_DIR
+          mkdir -p Payload
+          cp -R "Builds/iOS/XcodeProject/build/Build/Products/Release-iphoneos/Unity-iPhone.app" Payload/
+          zip -r PopPocket.ipa Payload
+          ls -la PopPocket.ipa
+
+    publishing:
+      artifacts:
+        - PopPocket.ipa
