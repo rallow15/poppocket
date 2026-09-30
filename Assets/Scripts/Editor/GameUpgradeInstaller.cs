@@ -71,7 +71,9 @@ public static class GameUpgradeInstaller
     // ────────────────────────────────────────────────────────────────
     private static void BuildVillage()
     {
-        if (GameObject.Find("MaisonsVillage") != null) return;
+        // Les vrais bâtiments du pack sont là ("Batiments") : on garde,
+        // on ne remet PAS les maisons-cubes par-dessus.
+        if (GameObject.Find("MaisonsVillage") != null || GameObject.Find("Batiments") != null) return;
 
         var root = new GameObject("MaisonsVillage");
         root.transform.SetParent(null);

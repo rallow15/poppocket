@@ -32,6 +32,7 @@ public static class DragInputInstaller
         DenseDecorInstaller.Run(); // décor plus dense autour de l'arène
         GameUpgradeInstaller.Run(); // village + animaux + menu + HUD bonus + safe area
         AnimalsPackInstaller.Run(); // vrais modèles animés du pack si importé (sinon consigne)
+        BuildingsPackInstaller.Run(); // bâtiments du pack Cartoon Buildings si importé (sinon consigne)
         var gm = Object.FindFirstObjectByType<GameManager>();
         if (gm == null) return; // pas dans la scène de jeu
 

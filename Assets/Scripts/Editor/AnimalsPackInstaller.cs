@@ -37,7 +37,18 @@ public static class AnimalsPackInstaller
 
         // Déjà remplacé ? (les animaux du pack ont un Animator, pas ceux en cubes)
         GameObject existing = GameObject.Find("Animaux");
-        if (existing != null && existing.GetComponentInChildren<Animator>(true) != null) return;
+        if (existing != null && existing.GetComponentInChildren<Animator>(true) != null)
+        {
+            // Animaux du pack déjà posés : il ne reste qu'à convertir les
+            // matériaux en URP si le pack était en shaders Built-in (ROSE).
+            if (UrpMaterialConverter.Convert(existing))
+            {
+                EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+                EditorSceneManager.SaveOpenScenes();
+                Debug.Log("[ANIMAUX-URP] Matériaux des animaux convertis en URP ✔ (plus de rose !)");
+            }
+            return;
+        }
 
         // ── 1. Détecter le pack dans le projet ───────────────────────
         List<GameObject> models = FindAnimalModels();
@@ -98,6 +109,9 @@ public static class AnimalsPackInstaller
             // Décor pur : aucun collider (jamais en travers d'un slime)
             StripColliders(animal);
 
+            // Shaders Built-in du pack → URP (sinon tout est rose)
+            UrpMaterialConverter.Convert(animal);
+
             // Animation de marche en boucle
             if (controller != null)
             {
@@ -140,28 +154,27 @@ public static class AnimalsPackInstaller
         var result = new List<GameObject>();
         var seen = new HashSet<string>();
 
-        foreach (string kind in new[] { "t:Prefab", "t:Model" })
+        // On ne prend QUE les prefabs (les FBX du pack sont les mêmes
+        // modèles en double à l'intérieur, on éviterait 2 fois le même animal)
+        foreach (string guid in AssetDatabase.FindAssets("t:Prefab"))
         {
-            foreach (string guid in AssetDatabase.FindAssets(kind))
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (string.IsNullOrEmpty(path) || seen.Contains(path)) continue;
-                seen.Add(path);
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.IsNullOrEmpty(path) || seen.Contains(path)) continue;
+            seen.Add(path);
 
-                // Le dossier du pack a "animal" dans son chemin (insensible à la casse)
-                string lowered = path.ToLower();
-                if (!lowered.Contains("animal")) continue;
+            // Le dossier du pack a "animal" dans son chemin (insensible à la casse)
+            string lowered = path.ToLower();
+            if (!lowered.Contains("animal")) continue;
 
-                // Évite les dossiers techniques (icônes, shaders, demo)
-                if (lowered.Contains("demo") || lowered.Contains("editor")) continue;
+            // Évite les dossiers techniques (icônes, shaders, demo)
+            if (lowered.Contains("demo") || lowered.Contains("editor")) continue;
 
-                GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (asset == null) continue;
-                if (asset.GetComponentInChildren<SkinnedMeshRenderer>(true) == null &&
-                    asset.GetComponentInChildren<MeshRenderer>(true) == null) continue;
+            GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (asset == null) continue;
+            if (asset.GetComponentInChildren<SkinnedMeshRenderer>(true) == null &&
+                asset.GetComponentInChildren<MeshRenderer>(true) == null) continue;
 
-                result.Add(asset);
-            }
+            result.Add(asset);
         }
         return result;
     }
