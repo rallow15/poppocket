@@ -68,9 +68,19 @@ public class GameManager : MonoBehaviour
         // en jeu mobile, économie de batterie.
         Application.targetFrameRate = 60;
 
+        // Le jeu n'attaque le round 1 QUE quand le joueur a appuyé sur
+        // JOUER dans le menu de départ (StartMenu.StartRequested).
+        // S'il n'y a aucun menu dans la scène, on démarre direct.
+        StartCoroutine(WaitMenuThenStart());
+    }
+
+    private System.Collections.IEnumerator WaitMenuThenStart()
+    {
+        yield return new WaitUntil(() => StartMenu.StartRequested || StartMenu.Instance == null);
+
         SpawnSlimes();
 
-        // On démarre le 1er round automatiquement
+        // Menu passé (ou absent) : on démarre le 1er round
         StartCoroutine(StartRoundFlow());
     }
 

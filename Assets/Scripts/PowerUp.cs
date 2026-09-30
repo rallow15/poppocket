@@ -39,6 +39,10 @@ public class PowerUp : MonoBehaviour
         SlimeController sc = other.GetComponentInParent<SlimeController>();
         if (sc == null) return; // ce n'est pas un slime
 
+        // HUD : une ligne en haut de l'écran avec les secondes qui défilent
+        // et QUI a pris le bonus (Toi / Bot 1 / Bot 2 / Bot 3)
+        PowerUpHud.Show(type, sc);
+
         PowerUpManager.Apply(type, sc);
         PowerUpManager.PlayBonusSound();
         Debug.Log("[POWER-UP] Ramassé : " + type + " par " +

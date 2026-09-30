@@ -16,3 +16,5 @@ Builds/iOS/XcodeProject/build/
 *.ipa
 Payload/
 .DS_Store
+# Fichiers temporaire de l'editeur Unity 6
+.utmp/

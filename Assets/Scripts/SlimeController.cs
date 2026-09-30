@@ -61,10 +61,16 @@ public class SlimeController : MonoBehaviour
 
     public Rigidbody Rigidbody => rb;
 
+    private Vector2 smoothInput;   // direction lissée (mouvement plus fluide)
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         squashBaseScale = transform.localScale;
+
+        // FLUIDITÉ : le Rigidbody est interpolé entre 2 pas de physique
+        // → le slime glisse à l'écran au lieu de "sautiller" à 60 Hz fixes.
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
 
         // Un slime ne doit pas basculer sur le côté
         rb.constraints = RigidbodyConstraints.FreezeRotationX |
@@ -156,14 +162,20 @@ public class SlimeController : MonoBehaviour
             return;
         }
 
-        if (input.sqrMagnitude > 0.05f)
+        // FLUIDITÉ : on ne pousse pas la force brute du doigt, on LISSE
+        // la direction (courbe exponentielle) → le slime démarre en douceur,
+        // tourne sans à-coups et glisse un peu quand on relâche.
+        smoothInput = Vector2.Lerp(smoothInput, input,
+                                   1f - Mathf.Exp(-12f * Time.fixedDeltaTime));
+
+        if (smoothInput.sqrMagnitude > 0.002f)
         {
             // Convertit l'input 2D (X = droite/gauche, Y = avant/arrière en vue 3e personne)
             // ForceMode.Acceleration : réactif quelle que soit la masse du Rigidbody.
-            Vector3 force = new Vector3(input.x, 0f, input.y) * playerForce * PowerFactor;
+            Vector3 force = new Vector3(smoothInput.x, 0f, smoothInput.y) * playerForce * PowerFactor;
             rb.AddForce(force, ForceMode.Acceleration);
 
-            ApplySquash(input.sqrMagnitude);
+            ApplySquash(smoothInput.sqrMagnitude);
         }
         else
         {
@@ -351,5 +363,6 @@ public class SlimeController : MonoBehaviour
         // Nettoie tous les effets power-up au début d'un nouveau round
         speedUntil = auraUntil = stunnedUntil = -1f;
         SetAuraVisual(false);
+        smoothInput = Vector2.zero;   // on repart du repos (pas de glisse fantôme)
     }
 }

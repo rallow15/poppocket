@@ -22,6 +22,7 @@ public static class DragInputInstaller
     public static void Run()
     {
         if (EditorApplication.isPlaying) return; // ne rien faire pendant le jeu
+        if (GameUpgradeInstaller.EnsureGameSceneOpen()) return; // batch : ouvrir la scène D'ABORD
         FixCamera();    // toujours (corrige la vieille hauteur 22 enregistrée)
         FixMovement();  // réactivité : pas de friction, accélération forte
         FixSound();     // son d'éclatement = PopUser.wav
@@ -29,6 +30,7 @@ public static class DragInputInstaller
         FixJump();      // saut plus haut (demande du joueur)
         InstallPowerUps(); // système de bonus : VITESSE / AURA / ZAP
         DenseDecorInstaller.Run(); // décor plus dense autour de l'arène
+        GameUpgradeInstaller.Run(); // village + animaux + menu + HUD bonus + safe area
         var gm = Object.FindFirstObjectByType<GameManager>();
         if (gm == null) return; // pas dans la scène de jeu
 
@@ -81,14 +83,19 @@ public static class DragInputInstaller
         var cam = mainCamGO.GetComponent<Camera>();
         if (cf == null || cam == null) return;
 
-        bool change = cf.height != 3.2f || cf.backDistance != 6.0f || cam.orthographic;
+        bool change = cf.height != 5.0f || cf.backDistance != 10.5f ||
+                      cf.fovPortrait != 78f || cam.orthographic;
 
-        cf.height = 3.2f;          // caméra BASSE : on est dans l'action
-        cf.backDistance = 6.0f;    // collée derrière le slime
-        cf.lookAtHeight = 1.4f;
-        cf.smoothSpeed = 6f;
-        cf.fovLandscape = 60f;
-        cf.fovPortrait = 70f;
+        // DEZOOM (demande salim) : l'iPhone montrait trop près, et le
+        // chrono était caché par la Dynamic Island. On recule la caméra
+        // et on ouvre le champ de vision — PLUS FORT EN MODE VERTICAL :
+        cf.height = 5.0f;          // caméra plus haute : on voit les alentours
+        cf.backDistance = 10.5f;   // reculée : village + animaux visibles
+        cf.lookAtHeight = 1.6f;
+        cf.smoothSpeed = 5f;
+        cf.fovLandscape = 66f;     // mode paysage : dézoom modéré
+        cf.fovPortrait = 78f;      // mode VERTICAL : gros dézoom (c'est ici que
+                                   // ça était trop zoomé sur iPhone)
         cam.orthographic = false;
 
         if (change)
@@ -96,7 +103,7 @@ public static class DragInputInstaller
             EditorUtility.SetDirty(cf);
             EditorUtility.SetDirty(cam);
             EditorSceneManager.SaveOpenScenes();
-            Debug.Log("[CAMERA-DRAG] Caméra corrigée en 3e personne basse ✔");
+            Debug.Log("[CAMERA-DRAG] Caméra dézoomée ✔ (vertical 78°, paysage 66°)");
         }
     }
 
