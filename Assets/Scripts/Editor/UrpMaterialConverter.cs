@@ -2,17 +2,21 @@
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 /// <summary>
 /// Répare les matériaux ROSES (shader magenta) des packs Asset Store.
 ///
-/// Astuce : on détecte le VRAI pipeline du projet (URP ou Built-in) et on
-/// convertit TOUT MATÉRIAU CASSÉ vers le shader du projet :
-///  - shader introuvable / shader d'erreur (Hidden/InternalErrorShader) → ROSE
-///  - dans un projet URP : un shader "Standard" (Built-in) serait rose aussi
+/// On détecte le VRAI pipeline du projet (URP ou Built-in) et on rebranche
+/// chaque matériau cassé sur le shader du projet ("Standard" ici).
 ///
-/// Garde couleur, texture, émission et transparence. Idempotent :
-/// le .mat converti est réutilisé (et réparé) au lieu d'être recréé.
+/// RUSE IMPORTANTE : quand le shader est cassé, l'API Unity n'expose AUCUNE
+/// propriété (ni couleur, ni texture) → on relit directement le fichier .mat
+/// (YAML) pour retrouver la vraie couleur + texture (ex. atlas des animaux).
+///
+/// On répare le matériau D'ORIGINE du pack (pas une copie) : guid stable,
+/// la scène reste branchée. Idempotent (matériau réparé = shader non cassé).
 /// </summary>
 internal static class UrpMaterialConverter
 {
@@ -25,20 +29,11 @@ internal static class UrpMaterialConverter
 
     private static Shader TargetShader()
     {
-        // ICI : Built-in (pas de URP dans ce projet) → "Standard".
-#if UNITY_6000_0_OR_NEWER
         if (IsUrp())
         {
             Shader urp = Shader.Find("Universal Render Pipeline/Lit");
             if (urp != null) return urp;
         }
-#else
-        if (IsUrp())
-        {
-            Shader urp = Shader.Find("Universal Render Pipeline/Lit");
-            if (urp != null) return urp;
-        }
-#endif
         Shader s = Shader.Find("Standard");
         if (s == null) s = Shader.Find("Mobile/Diffuse");   // secours ultime
         return s;
@@ -70,13 +65,17 @@ internal static class UrpMaterialConverter
             for (int m = 0; m < mats.Length; m++)
             {
                 if (mats[m] == null) continue;
-                if (!IsBroken(mats[m])) continue;
-                var fixedMat = FixedCopy(mats[m]);
-                if (fixedMat != null && fixedMat != mats[m])
-                {
-                    mats[m] = fixedMat;
-                    instanceChanged = true;
-                }
+
+                // Ancienne copie "..._PopPocket" créée pendant la première
+                // réparation : MÊME si son shader est correct (Standard sans
+                // texture = blanc), on la rebranche sur l'original du pack.
+                bool isOldCopy = mats[m].name.EndsWith("_PopPocket");
+                if (!isOldCopy && !IsBroken(mats[m])) continue;
+
+                Material target = ResolveOriginal(mats[m]);
+                Heal(target);                      // rebranche sur le bon shader + textures
+                if (target != mats[m]) instanceChanged = true;
+                mats[m] = target;
             }
             if (instanceChanged)
             {
@@ -84,103 +83,160 @@ internal static class UrpMaterialConverter
                 changed = true;
             }
         }
+        AssetDatabase.SaveAssets();
         return changed;
     }
 
+    // ────────────────────────────────────────────────────────────────
+    //  RÉPARATION DU MATÉRIAU (SUR PLACE)
+    // ────────────────────────────────────────────────────────────────
     /// <summary>
-    /// Recopie un matériau cassé avec le shader du projet.
-    /// Réutilise le .mat déjà créé (même guid → la scène reste branchée).
+    /// Rebranche un matériau cassé sur le shader du projet, sans perdre
+    /// sa couleur ni sa texture (relues dans le fichier .mat si besoin).
     /// </summary>
-    internal static Material FixedCopy(Material original)
+    private static void Heal(Material broken)
     {
-        string dir = "Assets/Materials/Packs";
-        if (!AssetDatabase.IsValidFolder("Assets/Materials"))
-            AssetDatabase.CreateFolder("Assets", "Materials");
-        if (!AssetDatabase.IsValidFolder(dir))
-            AssetDatabase.CreateFolder("Assets/Materials", "Packs");
-        string path = dir + "/" + original.name + "_PopPocket.mat";
-
         Shader target = TargetShader();
-        if (target == null) return original;
+        if (target == null) return;
 
-        // Réutilise le .mat déjà créé (on le répare s'il porte encore un shader rose)
-        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (mat == null)
-        {
-            mat = new Material(target) { name = original.name + "_PopPocket" };
-            AssetDatabase.CreateAsset(mat, path);
-        }
-        else if (mat.shader != target)
-        {
-            mat.shader = target;
-        }
+        // On lit la couleur + la texture AVANT de changer le shader
+        // (tant que le shader est cassé, l'API expose rien → lecture YAML).
+        Texture tex;
+        Color color;
+        ExtractLookFromYaml(broken, out tex, out color);
 
-        CopyProperties(original, mat, target);
-        EditorUtility.SetDirty(mat);
-        return mat;
-    }
+        if (broken.shader != target) broken.shader = target;
 
-    private static void CopyProperties(Material source, Material mat, Shader target)
-    {
-        // Couleur
-        Color color = Color.white;
-        if (source.HasProperty("_Color")) color = source.color;
-        if (source.HasProperty("_BaseColor")) color = source.GetColor("_BaseColor");
-        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
-        else if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);
-        if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.3f);
-        if (mat.HasProperty("_Glossiness")) mat.SetFloat("_Glossiness", 0.3f);
+        // Couleur (Standard lit "_Color", URP lit "_BaseColor")
+        if (broken.HasProperty("_Color")) broken.SetColor("_Color", color);
+        if (broken.HasProperty("_BaseColor")) broken.SetColor("_BaseColor", color);
+        if (broken.HasProperty("_Smoothness")) broken.SetFloat("_Smoothness", 0.3f);
+        if (broken.HasProperty("_Glossiness")) broken.SetFloat("_Glossiness", 0.3f);
 
-        // Texture principale
-        Texture tex = null;
-        if (source.HasProperty("_MainTex")) tex = source.mainTexture;
-        if (source.HasProperty("_BaseMap")) tex = source.GetTexture("_BaseMap");
+        // Texture principale (atlas des animaux, façades des bâtiments...)
         if (tex != null)
         {
-            if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", tex);
-            if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+            if (broken.HasProperty("_MainTex") && broken.GetTexture("_MainTex") == null)
+                broken.SetTexture("_MainTex", tex);
+            if (broken.HasProperty("_BaseMap") && broken.GetTexture("_BaseMap") == null)
+                broken.SetTexture("_BaseMap", tex);
         }
 
-        // Émission (panneaux lumineux, etc.)
-        if (source.HasProperty("_EmissionColor"))
+        EditorUtility.SetDirty(broken);
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  ANCIENNES COPIES "..._PopPocket" → ON RETROUVE L'ORIGINAL
+    // ────────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Si le matériau est une de nos anciennes copies "_PopPocket",
+    /// retrouve le matériau d'origine du pack (même nom, sans le suffixe)
+    /// pour le réparer LUI et rebrancher le renderer dessus.
+    /// </summary>
+    private static Material ResolveOriginal(Material mat)
+    {
+        const string suffix = "_PopPocket";
+        if (!mat.name.EndsWith(suffix)) return mat;
+        string baseName = mat.name.Substring(0, mat.name.Length - suffix.Length);
+
+        foreach (string guid in AssetDatabase.FindAssets(baseName + " t:Material"))
         {
-            Color emis = source.GetColor("_EmissionColor");
-            if (mat.HasProperty("_EmissionColor"))
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.IsNullOrEmpty(path)) continue;
+            var candidate = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (candidate != null && candidate.name == baseName) return candidate;
+        }
+        return mat;   // rien trouvé : on réparera la copie elle-même
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  LECTURE YAML DU .mat (quand le shader est cassé, l'API ne
+    //  expose aucune propriété : on lit le fichier texte)
+    // ────────────────────────────────────────────────────────────────
+    private static void ExtractLookFromYaml(Material mat, out Texture tex, out Color color)
+    {
+        tex = null;
+        color = Color.white;
+
+        // Déjà réparable via l'API (shader lisible) ? Alors on lit le matériau.
+        Shader s = mat.shader;
+        bool apiReadable = s != null && !s.name.StartsWith("Hidden/");
+        if (apiReadable)
+        {
+            if (mat.HasProperty("_Color")) color = mat.color;
+            if (mat.HasProperty("_BaseColor")) color = mat.GetColor("_BaseColor");
+            if (mat.HasProperty("_MainTex")) tex = mat.mainTexture;
+            if (mat.HasProperty("_BaseMap")) tex = mat.GetTexture("_BaseMap");
+            if (tex != null) return;   // texture OK : rien de plus à faire
+        }
+
+        // Lecture texte du fichier .mat (couleur + guid de texture)
+        string path = AssetDatabase.GetAssetPath(mat);
+        if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return;
+
+        string[] lines = System.IO.File.ReadAllLines(path);
+        bool inTexEnvs = false, inColors = false;
+        string current = null;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string trimmed = lines[i].TrimStart();
+
+            // ── entrées "- _Nom:" (texture ou couleur) ──────────────
+            if (trimmed.StartsWith("- _"))
             {
-                mat.SetColor("_EmissionColor", emis);
-                if (emis.maxColorComponent > 0.01f)
+                int colon = trimmed.IndexOf(':');
+                current = colon > 0 ? trimmed.Substring(2, colon - 2) : null;
+
+                // La valeur peut être sur la même ligne (m_Colors)
+                string rest = colon >= 0 ? trimmed.Substring(colon + 1) : "";
+                if (current != null && inColors &&
+                    (current == "_BaseColor" || current == "_Color") &&
+                    rest.Contains("{"))
                 {
-                    mat.EnableKeyword("_EMISSION");
-                    mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+                    color = ParseColor(rest);
+                    current = null;
                 }
-                else mat.DisableKeyword("_EMISSION");
+                // "- _BaseColor:" tout seul = l'objet vient à la ligne → on garde current
+                continue;
+            }
+
+            // ── sections ───────────────────────────────────────────
+            if (trimmed == "m_TexEnvs:") { inTexEnvs = true; inColors = false; current = null; continue; }
+            if (trimmed == "m_Colors:") { inColors = true; inTexEnvs = false; current = null; continue; }
+            if (trimmed.StartsWith("m_Ints") || trimmed.StartsWith("m_BuildTextureStacks") ||
+                trimmed.StartsWith("m_SavedProperties"))
+            { inTexEnvs = false; inColors = false; current = null; continue; }
+
+            if (current == null) continue;
+
+            // ── ligne m_Texture: dans une entrée de texture ────────
+            if (inTexEnvs && (current == "_BaseMap" || current == "_MainTex" || current == "_BaseColorMap") &&
+                trimmed.StartsWith("m_Texture:"))
+            {
+                var guidMatch = Regex.Match(trimmed, @"guid:\s*([0-9a-fA-F]+)");
+                if (guidMatch.Success && guidMatch.Groups[1].Value != "00000000000000000000000000000000")
+                {
+                    string texPath = AssetDatabase.GUIDToAssetPath(guidMatch.Groups[1].Value);
+                    if (!string.IsNullOrEmpty(texPath))
+                        tex = AssetDatabase.LoadAssetAtPath<Texture>(texPath);
+                }
+                current = null;   // on ne prend que la première texture utile
             }
         }
+    }
 
-        // Transparence
-        string shaderName = source.shader != null ? source.shader.name : "";
-        bool transparent = shaderName.Contains("Transparent") || shaderName.Contains("Alpha") ||
-                           System.Array.IndexOf(source.shaderKeywords, "_ALPHABLEND_ON") >= 0;
-        if (transparent)
-        {
-            if (mat.HasProperty("_Mode")) mat.SetFloat("_Mode", 2f);   // Fade (Standard)
-            mat.SetOverrideTag("RenderType", "Transparent");
-            mat.SetFloat("_SrcBlend", 5f);         // SrcAlpha
-            mat.SetFloat("_DstBlend", 10f);        // OneMinusSrcAlpha
-            mat.SetInt("_ZWrite", 0);
-            mat.renderQueue = 3000;
-            mat.EnableKeyword("_ALPHABLEND_ON");
-        }
-        else
-        {
-            if (mat.HasProperty("_Mode")) mat.SetFloat("_Mode", 0f);   // opaque (Standard)
-            mat.SetOverrideTag("RenderType", "");
-            mat.SetFloat("_SrcBlend", 1f);         // One
-            mat.SetFloat("_DstBlend", 0f);         // Zero
-            mat.SetInt("_ZWrite", 1);
-            mat.renderQueue = -1;
-            mat.DisableKeyword("_ALPHABLEND_ON");
-        }
+    /// <summary>{r: 1, g: 1, b: 1, a: 1} → Color</summary>
+    private static Color ParseColor(string yaml)
+    {
+        var nums = Regex.Match(yaml, @"r:\s*(-?[\d.]+),\s*g:\s*(-?[\d.]+),\s*b:\s*(-?[\d.]+)(?:,\s*a:\s*(-?[\d.]+))?");
+        if (!nums.Success) return Color.white;
+        float r = float.Parse(nums.Groups[1].Value, CultureInfo.InvariantCulture);
+        float g = float.Parse(nums.Groups[2].Value, CultureInfo.InvariantCulture);
+        float b = float.Parse(nums.Groups[3].Value, CultureInfo.InvariantCulture);
+        float a = nums.Groups[4].Success
+            ? float.Parse(nums.Groups[4].Value, CultureInfo.InvariantCulture) : 1f;
+        return new Color(r, g, b, a);
     }
 }
 #endif
