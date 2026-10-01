@@ -27,7 +27,7 @@ public class CameraFollow : MonoBehaviour
     [Tooltip("Portrait : caméra FIXE qui voit TOUT le sol de bulles d'un coup")]
     public bool portraitVueEntiere = true;
     [Tooltip("Portrait : marge autour du sol (en mètres) pour ne rien couper")]
-    public float portraitMargeSol = 2.5f;
+    public float portraitMargeSol = 6f;
     [Tooltip("Portrait : hauteur de la caméra (SI la vue fixe est désactivée)")]
     public float portraitHeight = 20f;
     [Tooltip("Portrait : petit recul derrière le joueur (si vue fixe désactivée)")]
@@ -103,8 +103,17 @@ public class CameraFollow : MonoBehaviour
         // 2) Position de la caméra selon le mode
         if (followTarget == null) return;
 
-        transform.position = Vector3.Lerp(transform.position, DesiredPosition(),
-                                          smoothSpeed * Time.deltaTime);
+        if (isPortrait && portraitVueEntiere && hasArena)
+        {
+            // Vue de dessus FIXE : on se pose DIRECTEMENT au bon endroit
+            // (pas de glissement → jamais un instant avec la vue coupée)
+            transform.position = DesiredPosition();
+        }
+        else
+        {
+            transform.position = Vector3.Lerp(transform.position, DesiredPosition(),
+                                              smoothSpeed * Time.deltaTime);
+        }
 
         // 3) Rotation de la caméra selon le mode
         if (isPortrait && portraitVueEntiere && hasArena)
@@ -175,7 +184,9 @@ public class CameraFollow : MonoBehaviour
         float besoinHauteurZ = (arenaHalfZ + marge) / tanV;                 // sens de l'écran vertical
         float besoinHauteurX = (arenaHalfX + marge) / Mathf.Max(0.05f, tanH); // sens horizontal
 
-        float hauteur = Mathf.Max(besoinHauteurZ, besoinHauteurX);
+        // Petite sécurité (+8%) : même si le FOV ou l'écran varie un poil,
+        // on garde toujours de l'air autour du sol → rien n'est coupé.
+        float hauteur = Mathf.Max(besoinHauteurZ, besoinHauteurX) * 1.08f;
         return arenaCenter + Vector3.up * hauteur;
     }
 
