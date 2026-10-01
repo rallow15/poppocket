@@ -10,7 +10,7 @@ using System.Collections;
 ///   • s'il arrive assez vite (impact >= minImpactVelocity) → POP !
 ///     (son + particules + score + destruction),
 ///   • s'il roulait doucement → elle reprend doucement sa forme,
-///     comme une vraie bulle de papier bulle qu'on n'a pas percée.
+///     comme une vraie bulle d'eau qu'on n'a pas percée.
 /// </summary>
 public class Bubble : MonoBehaviour
 {
@@ -113,10 +113,11 @@ public class Bubble : MonoBehaviour
         // 1) Son "pop" aléatoire parmi les 3 clips
         PlayPopSound();
 
-        // 2) Petite explosion de particules
+        // 2) Éclaboussure d'eau (participe teinté bleu eau)
         if (popParticlePrefab != null)
         {
-            Instantiate(popParticlePrefab, transform.position, Quaternion.identity);
+            var burst = Instantiate(popParticlePrefab, transform.position, Quaternion.identity);
+            MakeSplashWater(burst);
         }
 
         // 3) +1 au score du slime responsable
@@ -128,6 +129,30 @@ public class Bubble : MonoBehaviour
 
         // 4) La bulle disparaît
         Destroy(gameObject);
+    }
+
+    /// <summary>
+    /// Teinte les particules de l'explosion en COULEUR D'EAU (bleu clair),
+    /// pour une vraie éclaboussure de goutte qui éclate.
+    /// </summary>
+    private static void MakeSplashWater(GameObject burst)
+    {
+        Color eau = new Color(0.70f, 0.92f, 1f, 0.85f);   // goutte d'eau claire
+
+        var ps = burst.GetComponent<ParticleSystem>();
+        if (ps != null)
+        {
+            var main = ps.main;
+            main.startColor = new ParticleSystem.MinMaxGradient(eau);
+        }
+        foreach (var childPs in burst.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            if (childPs == ps) continue;
+            var m = childPs.main;
+            m.startColor = new ParticleSystem.MinMaxGradient(eau);
+        }
+        foreach (var pr in burst.GetComponentsInChildren<ParticleSystemRenderer>(true))
+            pr.material.color = eau;
     }
 
     /// <summary>Joue un son pop via un AudioManager central (sinon via une source locale).</summary>

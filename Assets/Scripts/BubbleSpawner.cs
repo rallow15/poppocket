@@ -27,7 +27,7 @@ public class BubbleSpawner : MonoBehaviour
     [Tooltip("Parent de tous les objets bulle (plus propre dans la hiérarchie)")]
     public Transform bubbleContainer;
 
-    // Matériaux pastel brillants partagés par toutes les bulles (bonbon/ASMR)
+    // Matériaux translucides partagés par toutes les bulles (eau)
     private Material[] domeMaterials;
     // Réglages de la bulle d'origine (sons, particules, pitch)
     private Bubble settingsSource;
@@ -126,9 +126,10 @@ public class BubbleSpawner : MonoBehaviour
     }
 
     /// <summary>
-    /// Matériaux « Cartoon Glossy pastel » des bulles (créés une fois) :
-    /// 4 couleurs bonbon qui varient selon la bulle, smoothness élevé
-    /// (0.92) pour de gros reflets brillants — le côté ASMR.
+    /// Matériaux « BULLES D'EAU » des bulles (créés une fois) :
+    /// gouttes transparentes et très brillantes, 3 teintes d'eau
+    /// (eau claire / eau turquoise / eau bleue). Mode TRANSPARENT du
+    /// shader Standard → on voit un peu à travers, comme une vraie bulle.
     /// Ce projet est en BUILT-IN : shader Standard, jamais URP/Lit (rose).
     /// </summary>
     private void EnsureMaterial()
@@ -136,27 +137,35 @@ public class BubbleSpawner : MonoBehaviour
         if (domeMaterials != null && domeMaterials.Length > 0) return;
 
         Shader shader = Shader.Find("Standard");
-        if (shader == null) shader = Shader.Find("Legacy Shaders/Diffuse");
-        if (shader == null) return;
+        if (shader == null) return;   // pas de fallback opaque : on veut du translucide
 
-        Color[] pastels = new Color[]
+        Color[] teintes = new Color[]
         {
-            new Color(1.00f, 0.80f, 0.86f, 1f),   // rose bonbon
-            new Color(0.72f, 0.95f, 0.83f, 1f),   // menthe fraîche
-            new Color(0.72f, 0.84f, 1.00f, 1f),   // bleu ciel doux
-            new Color(1.00f, 0.93f, 0.70f, 1f),   // jaune crème
+            new Color(0.70f, 0.92f, 1.00f, 0.50f),   // eau claire (bleu très pâle)
+            new Color(0.55f, 0.95f, 0.95f, 0.48f),   // eau turquoise
+            new Color(0.60f, 0.80f, 1.00f, 0.55f),   // eau bleue
         };
 
-        domeMaterials = new Material[pastels.Length];
-        for (int i = 0; i < pastels.Length; i++)
+        domeMaterials = new Material[teintes.Length];
+        for (int i = 0; i < teintes.Length; i++)
         {
             var mat = new Material(shader);
-            mat.color = pastels[i];
-            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.92f);
-            if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", 0f);
+            mat.color = teintes[i];
+
+            // Passage en mode TRANSPARENT (on voit à travers la bulle)
+            mat.SetFloat("_Mode", 3f);                  // 3 = Transparent
+            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            mat.SetInt("_ZWrite", 0);
+            mat.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.renderQueue = 3000;
+
+            // Surface mouillée : très lisse, gros reflets
+            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.96f);
+            if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", 0.05f);
             if (mat.HasProperty("_SmoothnessSource"))
-                mat.SetFloat("_SmoothnessSource", 0f);   // brillant spéculaire net
-            mat.name = "MatBubblePastel" + i;
+                mat.SetFloat("_SmoothnessSource", 0f);
+            mat.name = "MatBulleEau" + i;
             domeMaterials[i] = mat;
         }
     }

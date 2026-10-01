@@ -5,27 +5,24 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 
 /// <summary>
-/// Applique la texture papier à bulles (TextureCan, déjà téléchargée par salim)
-/// sur le sol de l'arène ("Arena") : albedo + relief (normal map),
-/// smoothness 0.9 → le sol brillant façon film à bulles sous les sphères 3D.
-/// Les bulles POP 3D (BubbleSpawner) restent AU-DESSUS, elles donnent le score.
-/// Idempotent : si l'arène porte déjà le bon matériau, rien ne se passe.
+/// ANNULE la texture papier à bulles sur le sol de l'arène (salim a changé
+/// d'idée : il veut des BULLES D'EAU qui éclatent, cf. BubbleSpawner).
+/// Si l'arène porte encore MatSolPapierBulles, on remet le sol bleu
+/// brillant d'origine (MatFloorPlayland). Idempotent.
 /// </summary>
 [InitializeOnLoad]
 public static class BubbleWrapFloorInstaller
 {
-    const string ColorTex  = "Assets/TexturesBulles/paper_0011_color_1k.jpg";
-    const string NormalTex = "Assets/TexturesBulles/paper_0011_normal_opengl_1k.png";
-    const string MaterialPath = "Assets/Materials/MatSolPapierBulles.mat";
-    const float TilingXZ = 14f;   // 28 m d'arène / ~2 m par motif
-    const float Smoothness = 0.9f;
+    const string WrapMaterialName = "MatSolPapierBulles";
+    const string BlueMaterialName = "MatFloorPlayland";
+    const string BlueMaterialPath = "Assets/Materials/MatFloorPlayland.mat";
 
     static BubbleWrapFloorInstaller()
     {
         EditorApplication.delayCall += Run;
     }
 
-    [MenuItem("POPPOCKET/6. Sol papier à bulles")]
+    [MenuItem("POPPOCKET/6. Retour au sol bleu (annule papier à bulles)")]
     public static void RunFromMenu() => Run();
 
     public static void Run()
@@ -42,62 +39,31 @@ public static class BubbleWrapFloorInstaller
         var ren = arena.GetComponent<MeshRenderer>();
         if (ren == null) return;
 
-        // Déjà fait ? on s'arrête là (idempotent)
-        if (ren.sharedMaterial != null && ren.sharedMaterial.name == "MatSolPapierBulles")
+        if (ren.sharedMaterial == null || ren.sharedMaterial.name != WrapMaterialName)
         {
-            Debug.Log("[BULLES-SOL] Sol papier à bulles déjà appliqué ✔");
+            Debug.Log("[BULLES-SOL] Le sol n'a jamais eu de papier à bulles ✔");
             return;
         }
 
-        var mat = MakeMaterial();
-        if (mat == null) return;
+        var blue = AssetDatabase.LoadAssetAtPath<Material>(BlueMaterialPath);
+        if (blue == null)
+        {
+            // Recrée le sol bleu brillant d'origine si l'asset a disparu
+            Shader shader = Shader.Find("Standard");
+            blue = new Material(shader) { name = BlueMaterialName,
+                color = new Color(0.70f, 0.86f, 0.99f) };
+            if (blue.HasProperty("_Glossiness")) blue.SetFloat("_Glossiness", 0.75f);
+            Directory.CreateDirectory("Assets/Materials");
+            AssetDatabase.CreateAsset(blue, BlueMaterialPath);
+            AssetDatabase.SaveAssets();
+        }
 
-        ren.sharedMaterial = mat;
+        ren.sharedMaterial = blue;
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         EditorSceneManager.SaveOpenScenes();
-        Debug.Log("[BULLES-SOL] Sol de l'arène = papier à bulles brillant ✔ (les 400 bulles 3D restent par-dessus, POP !)");
-    }
-
-    /// <summary>Crée une fois le matériau Standard : couleur + relief + brillance.</summary>
-    static Material MakeMaterial()
-    {
-        var existing = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
-        if (existing != null) return existing;
-
-        Texture2D color = AssetDatabase.LoadAssetAtPath<Texture2D>(ColorTex);
-        Texture2D normal = AssetDatabase.LoadAssetAtPath<Texture2D>(NormalTex);
-        if (color == null)
-        {
-            Debug.LogWarning("[BULLES-SOL] Texture couleur introuvable : " + ColorTex);
-            return null;
-        }
-
-        // La normal map doit être marquée comme RELIEF, sinon Unity l'affiche à plat
-        var imp = AssetImporter.GetAtPath(NormalTex) as TextureImporter;
-        if (imp != null && imp.textureType != TextureImporterType.NormalMap)
-        {
-            imp.textureType = TextureImporterType.NormalMap;
-            imp.SaveAndReimport();
-        }
-
-        Shader shader = Shader.Find("Standard");
-        if (shader == null)
-        {
-            Debug.LogWarning("[BULLES-SOL] Shader Standard introuvable (projet BUILT-IN)");
-            return null;
-        }
-
-        var mat = new Material(shader);
-        mat.mainTexture = color;
-        mat.mainTextureScale = new Vector2(TilingXZ, TilingXZ);
-        if (normal != null) mat.SetTexture("_BumpMap", normal);
-        if (mat.HasProperty("_Glossiness")) mat.SetFloat("_Glossiness", Smoothness);   // 0.9 : très brillant
-        if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", 0f);
-
-        Directory.CreateDirectory("Assets/Materials");
-        AssetDatabase.CreateAsset(mat, MaterialPath);
-        AssetDatabase.SaveAssets();
-        return mat;
+        AssetDatabase.DeleteAsset("Assets/Materials/MatSolPapierBulles.mat");
+        Debug.Log("[BULLES-SOL] Papier à bulles DU SOL retiré — retour du sol bleu brillant ✔" +
+                  " (au-dessus, les bulles sont maintenant des BULLES D'EAU !)");
     }
 }
 #endif
