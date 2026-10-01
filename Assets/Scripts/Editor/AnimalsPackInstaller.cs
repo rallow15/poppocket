@@ -39,13 +39,16 @@ public static class AnimalsPackInstaller
         GameObject existing = GameObject.Find("Animaux");
         if (existing != null && existing.GetComponentInChildren<Animator>(true) != null)
         {
-            // Animaux du pack déjà posés : on ne fait que réparer les
-            // matériaux roses (shader absent du projet).
-            if (UrpMaterialConverter.Convert(existing))
+            // Animaux du pack déjà posés : on répare les matériaux roses
+            // ET l'animation de marche (chaque animal doit jouer SA marche,
+            // partagée entre modèles = glissade sans bouger les pattes).
+            bool fixedMats = UrpMaterialConverter.Convert(existing);
+            bool fixedWalk = FixWalkAnimations(existing);
+            if (fixedMats || fixedWalk)
             {
                 EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
                 EditorSceneManager.SaveOpenScenes();
-                Debug.Log("[ANIMAUX-URP] Matériaux des animaux réparés ✔ (plus de rose !)");
+                Debug.Log("[ANIMAUX-PACK] Animaux vérifiés ✔ (matériaux + animation de marche de chaque animal réparés)");
             }
             return;
         }
@@ -70,12 +73,18 @@ public static class AnimalsPackInstaller
         float half = GameUpgradeInstaller.ArenaHalfForDecor();
         var root = new GameObject("Animaux");
 
-        // ── 3. Prépare l'animation de marche partagée ────────────────
-        AnimationClip walkClip = FindWalkClip(models);
-        AnimatorController controller = null;
-        if (walkClip != null) controller = BuildWalkController(walkClip);
-        if (walkClip == null)
-            Debug.LogWarning("[ANIMAUX-PACK] Clip de marche introuvable dans le pack — les animaux se baladeront sans animation");
+        // ── 3. Trouve LE clip de marche de CHAQUE animal ─────────────
+        // Un clip de marche anime seulement les os du modèle dont il vient
+        // → réutiliser LE même clip pour tous = les animaux glissent sans
+        // bouger les pattes. On cherche donc le clip de chacun.
+        var walkClips = new Dictionary<GameObject, AnimationClip>();
+        foreach (GameObject model in models)
+        {
+            AnimationClip clip = FindWalkClipForModel(model);
+            if (clip != null) walkClips[model] = clip;
+        }
+        if (walkClips.Count == 0)
+            Debug.LogWarning("[ANIMAUX-PACK] Aucun clip de marche trouvé dans le pack — les animaux se baladeront sans animation");
 
         // ── 4. Une instance de CHAQUE animal sur l'anneau ────────────
         // (cap à 14 modèles : si le pack contient des variantes, on s'en tient là)
@@ -112,12 +121,16 @@ public static class AnimalsPackInstaller
             // On répare tout shader rose du pack (shader absent du projet)
             UrpMaterialConverter.Convert(animal);
 
-            // Animation de marche en boucle
-            if (controller != null)
+            // Animation de marche : LE clip de CET animal (via son contrôleur)
+            AnimationClip ownClip;
+            walkClips.TryGetValue(model, out ownClip);
+            var anim = animal.GetComponent<Animator>();
+            if (anim == null) anim = animal.AddComponent<Animator>();
+            if (ownClip != null)
             {
-                var anim = animal.GetComponent<Animator>();
-                if (anim == null) anim = animal.AddComponent<Animator>();
-                anim.runtimeAnimatorController = controller;
+                string safe = SanitizeName(model.name);
+                anim.runtimeAnimatorController =
+                    BuildWalkController(ownClip, "Assets/Animals/Walk_" + safe + ".controller");
             }
             else
             {
@@ -179,37 +192,127 @@ public static class AnimalsPackInstaller
         return result;
     }
 
-    /// <summary>Cherche un clip de marche ("walk") dans tous les modèles du pack.</summary>
-    private static AnimationClip FindWalkClip(List<GameObject> models)
+    /// <summary>
+    /// Cherche le clip de marche du modèle DONNÉ (et pas n'importe lequel) :
+    /// 1. dans son propre contrôleur d'animation,
+    /// 2. dans son Animation (legacy),
+    /// 3. sinon le 1er clip de son contrôleur,
+    /// 4. sinon un clip du pack dont le nom contient le nom du modèle.
+    /// </summary>
+    private static AnimationClip FindWalkClipForModel(GameObject model)
     {
-        // 1) Le clip peut être référencé par un Animator dans le modèle lui-même
-        foreach (GameObject model in models)
+        var src = model.GetComponentInChildren<Animator>(true);
+        var legacy = model.GetComponentInChildren<Animation>(true);
+
+        // 1) Clip "walk" du contrôleur du modèle
+        if (src != null && src.runtimeAnimatorController != null)
         {
-            var src = model.GetComponentInChildren<Animator>(true);
-            if (src != null && src.runtimeAnimatorController != null)
-            {
-                foreach (var clip in src.runtimeAnimatorController.animationClips)
-                    if (clip != null && clip.name.ToLower().Contains("walk")) return clip;
-            }
+            var best = FindAnyClipInController(src.runtimeAnimatorController);
+            if (best != null) return best;
         }
 
-        // 2) Sinon : tout clip "walk" posé dans le dossier du pack
+        // 2) Animation legacy (anciens packs)
+        if (legacy != null)
+        {
+            foreach (AnimationState state in legacy)
+                if (state.clip != null && state.clip.name.ToLower().Contains("walk"))
+                    return state.clip;
+        }
+
+        // 3) Clip du pack dont le nom contient le nom du modèle
+        string modelName = model.name.ToLower();
         foreach (string guid in AssetDatabase.FindAssets("t:AnimationClip"))
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
             if (string.IsNullOrEmpty(path)) continue;
-            string lowered = path.ToLower();
-            if (!lowered.Contains("animal")) continue;
+            if (!path.ToLower().Contains("animal")) continue;
             var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
-            if (clip != null && clip.name.ToLower().Contains("walk")) return clip;
+            if (clip == null) continue;
+            string cn = clip.name.ToLower();
+            if (cn.Contains(modelName) && (cn.Contains("walk") || cn.Contains("run"))) return clip;
+        }
+        return FindAnyClipInController(src != null ? src.runtimeAnimatorController : null);
+    }
+
+    /// <summary>Tout clip de marche (ou à défaut le 1er clip) d'un contrôleur.</summary>
+    private static AnimationClip FindAnyClipInController(RuntimeAnimatorController controller)
+    {
+        if (controller == null) return null;
+        foreach (var clip in controller.animationClips)
+        {
+            if (clip == null) continue;
+            if (clip.name.ToLower().Contains("walk")) return clip;
+        }
+        foreach (var clip in controller.animationClips)
+            if (clip != null) return clip;
+        return null;
+    }
+
+    /// <summary>
+    /// Répare déjà posés : chaque animal reçoit le contrôleur avec SA
+    /// marche (les clips d'un autre modèle n'animent pas ses os).
+    /// Retourne true si un contrôleur a changé.
+    /// </summary>
+    private static bool FixWalkAnimations(GameObject root)
+    {
+        bool changed = false;
+        foreach (Transform child in root.transform)
+        {
+            var anim = child.GetComponent<Animator>();
+            if (anim == null) continue;
+
+            // "Animal_Tigre" → "Tigre" : on retrouve le modèle du pack
+            string name = child.name.StartsWith("Animal_")
+                ? child.name.Substring(7) : child.name;
+            GameObject model = FindModelByName(name);
+            AnimationClip clip = model != null ? FindWalkClipForModel(model) : null;
+            if (clip == null)
+            {
+                Debug.LogWarning("[ANIMAUX-MARCHE] Pas de clip de marche pour " + child.name);
+                continue;
+            }
+            var controller = BuildWalkController(clip,
+                "Assets/Animals/Walk_" + SanitizeName(name) + ".controller");
+            if (anim.runtimeAnimatorController != controller)
+            {
+                anim.runtimeAnimatorController = controller;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /// <summary>Retrouve le prefab du pack qui porte exactement ce nom.</summary>
+    private static GameObject FindModelByName(string name)
+    {
+        foreach (string guid in AssetDatabase.FindAssets(name + " t:Prefab"))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.IsNullOrEmpty(path)) continue;
+            if (!path.ToLower().Contains("animal")) continue;
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (asset != null && asset.name == name) return asset;
         }
         return null;
     }
 
-    /// <summary>Un contrôleur d'animation tout simple : 1 état = la marche, en boucle.</summary>
-    private static AnimatorController BuildWalkController(AnimationClip clip)
+    /// <summary>Nom de fichier sûr : lettres/chiffres/tirets seulement.</summary>
+    private static string SanitizeName(string name)
     {
-        const string path = "Assets/Animals/AnimalWalk.controller";
+        var sb = new System.Text.StringBuilder();
+        foreach (char c in name)
+        {
+            if (char.IsLetterOrDigit(c) || c == '-' || c == '_') sb.Append(c);
+        }
+        return sb.Length > 0 ? sb.ToString() : "Animal";
+    }
+
+    /// <summary>
+    /// Un contrôleur d'animation tout simple : 1 état = la marche, en boucle.
+    /// Un contrôleur PAR animal (le clip doit venir du bon modèle).
+    /// </summary>
+    private static AnimatorController BuildWalkController(AnimationClip clip, string path)
+    {
         System.IO.Directory.CreateDirectory("Assets/Animals");
 
         var existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
