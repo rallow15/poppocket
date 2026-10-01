@@ -1,10 +1,16 @@
 using UnityEngine;
+using System.Collections;
 
 /// <summary>
 /// Une bulle du tapis posée au sol (collider STATIQUE : le slime qui roule
 /// dessus déclenche la collision, pas besoin de Rigidbody sur 400 bulles).
-/// Éclate quand un Slime la percute assez vite (impact >= minImpactVelocity).
-/// Sur éclatement : son "pop" aléatoire + particules + score + destruction.
+///
+/// Le côté ASMR "satisfaisant" :
+///   • le slime la touche → la bulle S'ÉCRASE un instant (squish),
+///   • s'il arrive assez vite (impact >= minImpactVelocity) → POP !
+///     (son + particules + score + destruction),
+///   • s'il roulait doucement → elle reprend doucement sa forme,
+///     comme une vraie bulle de papier bulle qu'on n'a pas percée.
 /// </summary>
 public class Bubble : MonoBehaviour
 {
@@ -22,26 +28,83 @@ public class Bubble : MonoBehaviour
     public float minPitch = 0.85f;
     public float maxPitch = 1.15f;
 
-    private bool popped = false; // garde-fou : une bulle n'éclate qu'une fois
+    [Header("Feel ASMR - écrasement avant l'éclatement")]
+    [Tooltip("Durée du squish (la bulle s'aplatit) avant le POP")]
+    public float squashTime = 0.08f;
+    [Tooltip("Hauteur gardée pendant le squish (0.5 = moitié)")]
+    public float squashHeight = 0.5f;
+    [Tooltip("Largeur gagnée pendant le squish (1.15 = +15%)")]
+    public float squashWidth = 1.15f;
+
+    private bool popped = false;   // garde-fou : une bulle n'éclate qu'une fois
+    private bool squashing = false;
+    private Vector3 baseScale;
+
+    private void Awake()
+    {
+        baseScale = transform.localScale;   // l'échelle posée par le spawner
+    }
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (popped) return;
+        if (popped || squashing) return;
 
-        // Seuls les objets taggés "Slime" peuvent éclater la bulle
+        // Seuls les objets taggés "Slime" peuvent écraser / éclater la bulle
         if (!collision.gameObject.CompareTag("Slime")) return;
 
-        // Vérifie la force de l'impact : un frottement doux ne compte pas
         float impactSpeed = collision.relativeVelocity.magnitude;
-        if (impactSpeed < minImpactVelocity) return;
+        if (impactSpeed < minImpactVelocity * 0.35f) return;   // contact négligeable
 
-        Pop(collision.gameObject);
+        squashing = true;
+        StartCoroutine(SquashThenPop(collision.gameObject, impactSpeed));
+    }
+
+    /// <summary>
+    /// Le squish AVANT le pop : la bulle s'aplatit sous le slime, puis
+    ///   • impact fort          → POP (son + particules + score + destruction),
+    ///   • contact doux         → elle se regonfle, aucun point.
+    /// C'est ce petit temps d'écrasement qui rend l'éclatement satisfaisant.
+    /// </summary>
+    private IEnumerator SquashThenPop(GameObject slime, float impactSpeed)
+    {
+        // ── 1. On écrase la bulle (squish) ─────────────────────────
+        Vector3 squashed = new Vector3(
+            baseScale.x * squashWidth,
+            baseScale.y * squashHeight,
+            baseScale.z * squashWidth);
+
+        float t = 0f;
+        while (t < squashTime)
+        {
+            t += Time.deltaTime;
+            transform.localScale = Vector3.Lerp(baseScale, squashed, t / squashTime);
+            yield return null;
+        }
+
+        // ── 2. Assez forte → elle éclate ───────────────────────────
+        if (impactSpeed >= minImpactVelocity)
+        {
+            Pop(slime);
+            yield break;   // l'objet est détruit, la coroutine s'arrête ici
+        }
+
+        // ── 3. Trop douce → elle reprend sa forme doucement ────────
+        t = 0f;
+        while (t < 0.28f)
+        {
+            t += Time.deltaTime;
+            transform.localScale = Vector3.Lerp(squashed, baseScale, t / 0.28f);
+            yield return null;
+        }
+        transform.localScale = baseScale;
+        squashing = false;
     }
 
     /// <summary>
     /// Éclate la bulle : son + particules + score + destruction.
     /// Public : l'AURA des power-ups peut éclater des bulles à distance
-    /// (le slime passé reçoit le point).
+    /// (le slime passé reçoit le point) — et l'aura éclate SANS squish,
+    /// c'est voulu : ça fait une rafale, pas un toucher.
     /// </summary>
     public void Pop(GameObject slime)
     {

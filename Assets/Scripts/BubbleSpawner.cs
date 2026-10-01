@@ -27,8 +27,8 @@ public class BubbleSpawner : MonoBehaviour
     [Tooltip("Parent de tous les objets bulle (plus propre dans la hiérarchie)")]
     public Transform bubbleContainer;
 
-    // Matériau blanc brillant partagé par toutes les bulles
-    private Material domeMaterial;
+    // Matériaux pastel brillants partagés par toutes les bulles (bonbon/ASMR)
+    private Material[] domeMaterials;
     // Réglages de la bulle d'origine (sons, particules, pitch)
     private Bubble settingsSource;
 
@@ -103,7 +103,9 @@ public class BubbleSpawner : MonoBehaviour
         sc.center = Vector3.zero;
 
         MeshRenderer mrenderer = dome.GetComponent<MeshRenderer>();
-        mrenderer.sharedMaterial = domeMaterial;
+        mrenderer.sharedMaterial = domeMaterials != null
+            ? domeMaterials[Random.Range(0, domeMaterials.Length)]
+            : null;
 
         dome.transform.localScale = new Vector3(domeScaleXZ, domeScaleY, domeScaleXZ);
         dome.transform.position = pos;
@@ -123,24 +125,40 @@ public class BubbleSpawner : MonoBehaviour
         }
     }
 
-    /// <summary>Matériau brillant blanc-lumineux des bulles (créé une fois).</summary>
+    /// <summary>
+    /// Matériaux « Cartoon Glossy pastel » des bulles (créés une fois) :
+    /// 4 couleurs bonbon qui varient selon la bulle, smoothness élevé
+    /// (0.92) pour de gros reflets brillants — le côté ASMR.
+    /// Ce projet est en BUILT-IN : shader Standard, jamais URP/Lit (rose).
+    /// </summary>
     private void EnsureMaterial()
     {
-        if (domeMaterial != null) return;
+        if (domeMaterials != null && domeMaterials.Length > 0) return;
 
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-        if (shader == null) shader = Shader.Find("Standard");
+        Shader shader = Shader.Find("Standard");
         if (shader == null) shader = Shader.Find("Legacy Shaders/Diffuse");
+        if (shader == null) return;
 
-        domeMaterial = new Material(shader);
-        Color white = new Color(0.94f, 0.97f, 1.00f, 1f);
-        if (domeMaterial.HasProperty("_BaseColor")) domeMaterial.SetColor("_BaseColor", white);
-        domeMaterial.color = white;
-        if (domeMaterial.HasProperty("_Smoothness")) domeMaterial.SetFloat("_Smoothness", 0.9f);
-        if (domeMaterial.HasProperty("_SmoothnessSource"))
-            domeMaterial.SetFloat("_SmoothnessSource", 1f); // brillant depuis l'albedo
+        Color[] pastels = new Color[]
+        {
+            new Color(1.00f, 0.80f, 0.86f, 1f),   // rose bonbon
+            new Color(0.72f, 0.95f, 0.83f, 1f),   // menthe fraîche
+            new Color(0.72f, 0.84f, 1.00f, 1f),   // bleu ciel doux
+            new Color(1.00f, 0.93f, 0.70f, 1f),   // jaune crème
+        };
 
-        domeMaterial.name = "MatBubbleDomes";
+        domeMaterials = new Material[pastels.Length];
+        for (int i = 0; i < pastels.Length; i++)
+        {
+            var mat = new Material(shader);
+            mat.color = pastels[i];
+            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.92f);
+            if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", 0f);
+            if (mat.HasProperty("_SmoothnessSource"))
+                mat.SetFloat("_SmoothnessSource", 0f);   // brillant spéculaire net
+            mat.name = "MatBubblePastel" + i;
+            domeMaterials[i] = mat;
+        }
     }
 
     /// <summary>Nombre de bulles vivantes (utilisé par GameManager si besoin).</summary>

@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 3642960929672413706}
   - component: {fileID: 8049006619768810113}
   - component: {fileID: 8306881869927846945}
+  - component: {fileID: 2204898432926912877}
   m_Layer: 0
   m_Name: PlayerSlimePrefab
   m_TagString: Slime
@@ -183,6 +184,22 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 5d94f4a2fc448e048921f1ced6184f81, type: 2}
   - {fileID: 2100000, guid: 4b15ed767a23273429cbc8acb0770cb7, type: 2}
   eyesMaterial: {fileID: 2100000, guid: 730b268c5e7142d42be9cdc795a4fd99, type: 2}
+--- !u!114 &2204898432926912877
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6095019058086844373}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73a42618e39f3714180fa6b6972d024a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SlimeWobble
+  visual: {fileID: 252653905103153892}
+  bounceRateRun: 3.4
+  bounceRateWalk: 1.7
+  squashAmount: 0.16
 --- !u!1001 &291364113785064719
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -209,11 +226,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 01680138bae613f4896080645dd4503e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -0.5126248
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 01680138bae613f4896080645dd4503e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.29511312
+      value: 0.000000035394887
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 01680138bae613f4896080645dd4503e, type: 3}
       propertyPath: m_LocalRotation.w
