@@ -1,10 +1,13 @@
 using UnityEngine;
 
 /// <summary>
-/// Caméra à la 3e personne, façon Roblox : elle reste DERRIÈRE le slime
-/// (direction fixe vers le sud) et le suit en glissant. Vue perspective
-/// rase pour voir l'étendue du tapis de bulles devant soi.
-/// S'adapte au portrait/paysage en élargissant le champ de vision (FOV).
+/// Caméra qui s'adapte au sens du téléphone :
+///   • PORTRAIT (vertical)  → VUE DE DESSUS (demandée par salim) :
+///     caméra presque à la verticale au-dessus du slime, on voit le sol
+///     autour de soi comme sur une carte.
+///   • PAYSAGE (horizontal) → la vue d'ORIGINE : derrière le slime,
+///     perspective rase (RIEN n'a changé pour ce mode).
+/// Le suivi reste fluide dans les deux cas.
 /// </summary>
 public class CameraFollow : MonoBehaviour
 {
@@ -12,13 +15,21 @@ public class CameraFollow : MonoBehaviour
     [Tooltip("Transform du slime joueur (assigné par GameManager)")]
     public Transform followTarget;
 
-    [Header("Vue 3e personne")]
-    [Tooltip("Hauteur de la caméra au-dessus du joueur")]
+    [Header("Vue 3e personne (PAYSAGE — inchangée)")]
+    [Tooltip("Hauteur de la caméra au-dessus du joueur (paysage)")]
     public float height = 4.5f;
-    [Tooltip("Distance de la caméra derrière le joueur")]
+    [Tooltip("Distance de la caméra derrière le joueur (paysage)")]
     public float backDistance = 8.5f;
-    [Tooltip("Hauteur du point visé (la caméra plonge un peu vers le sol)")]
+    [Tooltip("Hauteur du point visé (la caméra plonge un peu vers le sol) (paysage)")]
     public float lookAtHeight = 1.2f;
+
+    [Header("Vue DE DESSUS (PORTRAIT seulement)")]
+    [Tooltip("Portrait : hauteur de la caméra (vue plongeante)")]
+    public float portraitHeight = 13f;
+    [Tooltip("Portrait : petit recul derrière le joueur (presque à la verticale)")]
+    public float portraitBackDistance = 1.2f;
+    [Tooltip("Portrait : la caméra regarde le slime lui-même (pas devant)")]
+    public float portraitLookAtHeight = 0f;
 
     [Header("Fluide / zoom")]
     [Tooltip("Vitesse de suivi fluide (plus faible = plus doux)")]
@@ -75,19 +86,38 @@ public class CameraFollow : MonoBehaviour
         transform.LookAt(LookPoint());
     }
 
-    /// <summary>Position cible : derrière le joueur, en hauteur.</summary>
+    /// <summary>
+    /// Position cible :
+    ///   • PAYSAGE  → comme avant (derrière le joueur, vue rase),
+    ///   • PORTRAIT → presque à la verticale : vue DE DESSUS demandée par salim.
+    /// </summary>
     private Vector3 DesiredPosition()
     {
         if (followTarget == null) return transform.position;
+
+        if (isPortrait)
+        {
+            return followTarget.position
+                   + Vector3.back * portraitBackDistance   // quasi à la verticale
+                   + Vector3.up * portraitHeight;
+        }
+
         return followTarget.position
                + Vector3.back * backDistance   // toujours derrière (sud)
                + Vector3.up * height;
     }
 
-    /// <summary>Point que la caméra regarde : un peu devant et au-dessus du slime.</summary>
+    /// <summary>Point que la caméra regarde :</summary>
     private Vector3 LookPoint()
     {
         if (followTarget == null) return Vector3.zero;
+
+        if (isPortrait)
+        {
+            // Vue de dessus : on regarde le slime lui-même
+            return followTarget.position + Vector3.up * portraitLookAtHeight;
+        }
+
         return followTarget.position
                + Vector3.up * lookAtHeight
                + Vector3.forward * 3.5f;  // on voit le tapis DEVANT le slime
