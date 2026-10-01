@@ -86,18 +86,16 @@ public static class DragInputInstaller
         if (cf == null || cam == null) return;
 
         bool change = cf.height != 5.0f || cf.backDistance != 10.5f ||
-                      cf.fovPortrait != 78f || cam.orthographic;
+                      cf.fovLandscape != 66f || cam.orthographic;
 
         // DEZOOM (demande salim) : l'iPhone montrait trop près, et le
         // chrono était caché par la Dynamic Island. On recule la caméra
-        // et on ouvre le champ de vision — PLUS FORT EN MODE VERTICAL :
+        // et on ouvre le champ de vision — MÊME VUE VERTICAL ET HORIZONTAL :
         cf.height = 5.0f;          // caméra plus haute : on voit les alentours
         cf.backDistance = 10.5f;   // reculée : village + animaux visibles
         cf.lookAtHeight = 1.6f;
         cf.smoothSpeed = 5f;
-        cf.fovLandscape = 66f;     // mode paysage : dézoom modéré
-        cf.fovPortrait = 78f;      // mode VERTICAL : gros dézoom (c'est ici que
-                                   // ça était trop zoomé sur iPhone)
+        cf.fovLandscape = 66f;     // champ de vision (les 2 sens : même vue)
         cam.orthographic = false;
 
         if (change)
@@ -105,7 +103,7 @@ public static class DragInputInstaller
             EditorUtility.SetDirty(cf);
             EditorUtility.SetDirty(cam);
             EditorSceneManager.SaveOpenScenes();
-            Debug.Log("[CAMERA-DRAG] Caméra dézoomée ✔ (vertical 78°, paysage 66°)");
+            Debug.Log("[CAMERA-DRAG] Caméra dézoomée ✔ (même vue vertical et horizontal)");
         }
     }
 
