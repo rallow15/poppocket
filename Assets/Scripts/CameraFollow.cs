@@ -24,8 +24,8 @@ public class CameraFollow : MonoBehaviour
     public float lookAtHeight = 1.2f;
 
     [Header("Vue DE DESSUS (PORTRAIT seulement)")]
-    [Tooltip("Portrait : hauteur de la caméra (vue plongeante)")]
-    public float portraitHeight = 13f;
+    [Tooltip("Portrait : hauteur de la caméra (vue plongeante) — plus haut = on voit plus large")]
+    public float portraitHeight = 20f;
     [Tooltip("Portrait : petit recul derrière le joueur (presque à la verticale)")]
     public float portraitBackDistance = 1.2f;
     [Tooltip("Portrait : la caméra regarde le slime lui-même (pas devant)")]
