@@ -8623,9 +8623,9 @@ MonoBehaviour:
   height: 5
   backDistance: 10.5
   lookAtHeight: 1.6
+  portraitDezoomFacteur: 1.25
   smoothSpeed: 5
-  fovLandscape: 66
-  fovPortrait: 78
+  fov: 66
 --- !u!81 &437243617
 AudioListener:
   m_ObjectHideFlags: 0
@@ -8924,7 +8924,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 28cc57c83f153d74fb5d64955b131071, type: 2}
+  - {fileID: 2100000, guid: db2d72ddcf496a944b95f3cf25d8ed76, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

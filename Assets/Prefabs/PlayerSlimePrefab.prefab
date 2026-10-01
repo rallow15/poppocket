@@ -197,9 +197,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlimeWobble
   visual: {fileID: 252653905103153892}
-  bounceRateRun: 3.4
-  bounceRateWalk: 1.7
-  squashAmount: 0.16
+  bounceRun: 4.2
+  bounceWalk: 2.2
+  squashForce: 0.28
+  hopAmount: 0.18
+  rollAmount: 16
+  leanAmount: 14
+  jiggleStrength: 4.5
 --- !u!1001 &291364113785064719
 PrefabInstance:
   m_ObjectHideFlags: 0
