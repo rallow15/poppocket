@@ -86,7 +86,7 @@ public static class DragInputInstaller
         if (cf == null || cam == null) return;
 
         bool change = cf.height != 5.0f || cf.backDistance != 10.5f ||
-                      cf.fovLandscape != 66f || cam.orthographic;
+                      cf.fov != 66f || cam.orthographic;
 
         // DEZOOM (demande salim) : l'iPhone montrait trop près, et le
         // chrono était caché par la Dynamic Island. On recule la caméra
@@ -95,7 +95,7 @@ public static class DragInputInstaller
         cf.backDistance = 10.5f;   // reculée : village + animaux visibles
         cf.lookAtHeight = 1.6f;
         cf.smoothSpeed = 5f;
-        cf.fovLandscape = 66f;     // champ de vision (les 2 sens : même vue)
+        cf.fov = 66f;              // champ de vision (les 2 sens : même vue)
         cam.orthographic = false;
 
         if (change)
