@@ -2,12 +2,12 @@ using UnityEngine;
 
 /// <summary>
 /// Caméra qui s'adapte au sens du téléphone :
-///   • PORTRAIT (vertical)  → VUE DE DESSUS (demandée par salim) :
-///     caméra presque à la verticale au-dessus du slime, on voit le sol
-///     autour de soi comme sur une carte.
+///   • PORTRAIT (vertical)  → VUE DE DESSUS FIXE (demandée par salim) :
+///     la caméra ne bouge PAS, elle est au-dessus du centre de l'arène,
+///     dézoomée juste assez pour voir TOUT le sol de bulles d'un coup,
+///     comme un plateau de jeu sur une table.
 ///   • PAYSAGE (horizontal) → la vue d'ORIGINE : derrière le slime,
-///     perspective rase (RIEN n'a changé pour ce mode).
-/// Le suivi reste fluide dans les deux cas.
+///     perspective rase, la caméra suit le joueur (RIEN n'a changé).
 /// </summary>
 public class CameraFollow : MonoBehaviour
 {
@@ -15,7 +15,7 @@ public class CameraFollow : MonoBehaviour
     [Tooltip("Transform du slime joueur (assigné par GameManager)")]
     public Transform followTarget;
 
-    [Header("Vue 3e personne (PAYSAGE — inchangée)")]
+    [Header("Vue 3e personne (PAYSAGE - inchangee)")]
     [Tooltip("Hauteur de la caméra au-dessus du joueur (paysage)")]
     public float height = 4.5f;
     [Tooltip("Distance de la caméra derrière le joueur (paysage)")]
@@ -24,9 +24,13 @@ public class CameraFollow : MonoBehaviour
     public float lookAtHeight = 1.2f;
 
     [Header("Vue DE DESSUS (PORTRAIT seulement)")]
-    [Tooltip("Portrait : hauteur de la caméra (vue plongeante) — plus haut = on voit plus large")]
+    [Tooltip("Portrait : caméra FIXE qui voit TOUT le sol de bulles d'un coup")]
+    public bool portraitVueEntiere = true;
+    [Tooltip("Portrait : marge autour du sol (en mètres) pour ne rien couper")]
+    public float portraitMargeSol = 2.5f;
+    [Tooltip("Portrait : hauteur de la caméra (SI la vue fixe est désactivée)")]
     public float portraitHeight = 20f;
-    [Tooltip("Portrait : petit recul derrière le joueur (presque à la verticale)")]
+    [Tooltip("Portrait : petit recul derrière le joueur (si vue fixe désactivée)")]
     public float portraitBackDistance = 1.2f;
     [Tooltip("Portrait : la caméra regarde le slime lui-même (pas devant)")]
     public float portraitLookAtHeight = 0f;
@@ -43,6 +47,11 @@ public class CameraFollow : MonoBehaviour
     private bool isPortrait;
     private float currentFov;
 
+    // Taille de l'arène (récupérée du BubbleSpawner) pour cadrer TOUT le sol
+    private bool hasArena;
+    private Vector3 arenaCenter;
+    private float arenaHalfX = 14f, arenaHalfZ = 14f;
+
     private void Awake()
     {
         cam = GetComponent<Camera>();
@@ -52,13 +61,26 @@ public class CameraFollow : MonoBehaviour
         cam.fieldOfView = currentFov;
     }
 
+    private void Start()
+    {
+        // On récupère la taille du sol de bulles pour le cadrage complet
+        var sp = FindObjectOfType<BubbleSpawner>();
+        if (sp != null)
+        {
+            arenaCenter = sp.transform.position;
+            arenaHalfX = sp.arenaSize.x * 0.5f;
+            arenaHalfZ = sp.arenaSize.y * 0.5f;
+            hasArena = true;
+        }
+    }
+
     /// <summary>GameManager donne le slime joueur après le spawn.</summary>
     public void SetTarget(Transform target)
     {
         followTarget = target;
         if (followTarget != null)
         {
-            // Saute instantanément sur le joueur (pas de glissement au départ)
+            // Saute instantanément sur la bonne position (pas de glissement au départ)
             transform.position = DesiredPosition();
             transform.LookAt(LookPoint());
         }
@@ -78,21 +100,36 @@ public class CameraFollow : MonoBehaviour
         currentFov = Mathf.Lerp(currentFov, targetFov, Time.deltaTime * 4f);
         cam.fieldOfView = currentFov;
 
-        // 2) Suivi fluide du joueur, toujours DERRIÈRE lui
+        // 2) Position de la caméra selon le mode
         if (followTarget == null) return;
 
         transform.position = Vector3.Lerp(transform.position, DesiredPosition(),
                                           smoothSpeed * Time.deltaTime);
-        transform.LookAt(LookPoint());
+
+        // 3) Rotation de la caméra selon le mode
+        if (isPortrait && portraitVueEntiere && hasArena)
+        {
+            // Vue de dessus FIXE : bien droite vers le bas
+            transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        }
+        else
+        {
+            transform.LookAt(LookPoint());
+        }
     }
 
     /// <summary>
     /// Position cible :
-    ///   • PAYSAGE  → comme avant (derrière le joueur, vue rase),
-    ///   • PORTRAIT → presque à la verticale : vue DE DESSUS demandée par salim.
+    ///   • PORTRAIT + vue entière → FIXE au-dessus du CENTRE de l'arène,
+    ///     dézoomée juste assez pour voir tout le sol de bulles.
+    ///   • PORTRAIT + vue entière OFF → au-dessus du joueur (vue plongeante).
+    ///   • PAYSAGE → comme avant (derrière le joueur, vue rase).
     /// </summary>
     private Vector3 DesiredPosition()
     {
+        if (isPortrait && portraitVueEntiere && hasArena)
+            return VueEntiereSolPosition();
+
         if (followTarget == null) return transform.position;
 
         if (isPortrait)
@@ -114,13 +151,32 @@ public class CameraFollow : MonoBehaviour
 
         if (isPortrait)
         {
-            // Vue de dessus : on regarde le slime lui-même
+            // Vue de dessus (si vue fixe off) : on regarde le slime lui-même
             return followTarget.position + Vector3.up * portraitLookAtHeight;
         }
 
         return followTarget.position
                + Vector3.up * lookAtHeight
                + Vector3.forward * 3.5f;  // on voit le tapis DEVANT le slime
+    }
+
+    /// <summary>
+    /// Le dézoom MAGIQUE : la caméra monte exactement assez haut pour que
+    /// TOUT le sol de bulles (l'arène + une marge) tienne dans l'écran.
+    /// Ça marche quelle que soit la taille de l'arène et l'écran du téléphone.
+    /// </summary>
+    private Vector3 VueEntiereSolPosition()
+    {
+        // Largeur visible en fonction du FOV vertical et de la forme de l'écran
+        float tanV = Mathf.Tan(Mathf.Deg2Rad * Mathf.Max(10f, currentFov) * 0.5f);
+        float tanH = tanV * cam.aspect;
+
+        float marge = portraitMargeSol;
+        float besoinHauteurZ = (arenaHalfZ + marge) / tanV;                 // sens de l'écran vertical
+        float besoinHauteurX = (arenaHalfX + marge) / Mathf.Max(0.05f, tanH); // sens horizontal
+
+        float hauteur = Mathf.Max(besoinHauteurZ, besoinHauteurX);
+        return arenaCenter + Vector3.up * hauteur;
     }
 
     private float TargetFov()
