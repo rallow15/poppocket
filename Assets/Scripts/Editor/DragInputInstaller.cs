@@ -108,10 +108,13 @@ public static class DragInputInstaller
     }
 
     /// <summary>
-    /// Réactivité du déplacement : les slimes glissent comme du savon
-    /// (friction quasi nulle) avec une accélération forte ; le freinage est
-    /// assuré par la traînée du Rigidbody → réponse immédiate quand on
-    /// relâche le doigt. Appliqué aux PROJÉFABS (les slimes naissent de là).
+    /// Réactivité du déplacement (CHANGEMENT demandé par salim : il n'aimait
+    /// pas la "glisse savon") : désormais le slime est de la PÂTE DE GELÉE —
+    ///   • il démarre vite (accélération forte),
+    ///   • il ne patine plus (friction réelle au sol),
+    ///   • il S'ARRÊTE dès qu'on relâche le doigt (traînée plus forte),
+    ///   • et il rebondit un peu (il reste un slime).
+    /// Appliqué aux PRÉFABS (les slimes naissent de là).
     /// </summary>
     private static void FixMovement()
     {
@@ -121,7 +124,7 @@ public static class DragInputInstaller
         if (changed)
         {
             EditorSceneManager.SaveOpenScenes();
-            Debug.Log("[MOVE-FIX] Slimes boostés : glisse rapide et réactive ✔");
+            Debug.Log("[MOVE-FIX] Slimes en gelée collante : démarre vite, s'arrête net, rebondi un peu ✔");
         }
     }
 
@@ -154,9 +157,9 @@ public static class DragInputInstaller
         }
 
         var rb = contents.GetComponent<Rigidbody>();
-        if (rb != null && !Mathf.Approximately(rb.linearDamping, 8f))
+        if (rb != null && !Mathf.Approximately(rb.linearDamping, 13f))
         {
-            rb.linearDamping = 8f; // top speed ≈ accel/8 → ~7.5 m/s joueur, réactif
+            rb.linearDamping = 13f; // s'arrête vite quand on relâche (avant : 8 = patineur)
             changed = true;
         }
 
@@ -176,22 +179,43 @@ public static class DragInputInstaller
         return changed;
     }
 
-    /// <summary>PhysicMaterial "savon" : friction quasi nulle combinée au minimum.</summary>
+    /// <summary>
+    /// PhysicMaterial du slime : AVANT = "savon" (friction 0.02, patineur) ;
+    /// salim n'aimait pas → maintenant de la gelée qui ACCROCHE : friction
+    /// réelle (0.7) combinée au MAXIMUM + petit rebond 0.3.
+    /// Le fichier existant est re-réglé à chaque passage (jamais recréé).
+    /// </summary>
     private static PhysicsMaterial LoadOrCreateGlideMaterial()
     {
         const string path = "Assets/Materials/MatSlimeGlide.physicMaterial";
         var mat = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(path);
-        if (mat != null) return mat;
+        bool changed = false;
 
-        Directory.CreateDirectory("Assets/Materials");
-        mat = new PhysicsMaterial("SlimeGlide")
+        if (mat == null)
         {
-            dynamicFriction = 0.02f,
-            staticFriction = 0.02f,
-            bounciness = 0.05f,
-            frictionCombine = PhysicsMaterialCombine.Minimum
-        };
-        AssetDatabase.CreateAsset(mat, path);
+            Directory.CreateDirectory("Assets/Materials");
+            mat = new PhysicsMaterial("SlimeGrip");
+            AssetDatabase.CreateAsset(mat, path);
+            changed = true;
+        }
+
+        // Re-règle toujours (l'ancien fichier portait les valeurs "savon")
+        if (!Mathf.Approximately(mat.dynamicFriction, 0.7f))
+            { mat.dynamicFriction = 0.7f; changed = true; }
+        if (!Mathf.Approximately(mat.staticFriction, 0.7f))
+            { mat.staticFriction = 0.7f; changed = true; }
+        if (!Mathf.Approximately(mat.bounciness, 0.3f))
+            { mat.bounciness = 0.3f; changed = true; }
+        if (mat.frictionCombine != PhysicsMaterialCombine.Maximum)
+            { mat.frictionCombine = PhysicsMaterialCombine.Maximum; changed = true; }
+        if (mat.bounceCombine != PhysicsMaterialCombine.Maximum)
+            { mat.bounceCombine = PhysicsMaterialCombine.Maximum; changed = true; }
+
+        if (changed)
+        {
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
+        }
         return mat;
     }
 
