@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 51af1bf14b4dca74fa00a0d7205b73e1
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Demo/DemoWall.mat
+  uploadId: 962786

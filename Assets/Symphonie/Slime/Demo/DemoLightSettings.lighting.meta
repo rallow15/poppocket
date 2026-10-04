@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3ccd8ba1500a6374e9c8b07748e96340
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4890085278179872738
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Demo/DemoLightSettings.lighting
+  uploadId: 962786

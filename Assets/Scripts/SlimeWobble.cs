@@ -2,15 +2,15 @@ using UnityEngine;
 
 /// <summary>
 /// Animation "gelée" du slime — le modèle McSteeg n'a aucune animation
-/// intégrée, donc on l'anime par code. DÉMANDE SALIM : PLUS D'EFFET,
-/// et il faut que ça se VOIE (salim disait « y'a pas d'animation »).
-///   • il SAUTILLE vraiment : hop généreux, on voit le slime quitter le sol,
-///   • l'écrasement / étirement est BEAUCOUP plus fort (vrai rebond de gelée),
-///   • il se PENCHE vers sa direction de déplacement,
-///   • il se BALANCE gauche/droite en rythme (roulis de gelée),
-///   • il GIGOTE quand il tourne brusquement,
-///   • il se TOURNE vers sa direction (les yeux avancent),
-///   • petite respiration quand il est à l'arrêt.
+/// intégrée, donc on l'anime par code.
+/// DÉMANDES SALIM (2026-10-02) : hop, balancement et penchement DÉSACTIVÉS
+/// (rien de "mécanique") → par contre le CORPS se déforme comme un vrai gel :
+///   • le mesh ondule (une onde parcourt le corps de la queue vers la tête),
+///   • le corps s'ÉTIRE dans la direction du mouvement, l'arrière traîne,
+///   • il se relâche AVEC DU RETARD quand on s'arrête (jello),
+///   • le bas s'aplatit légèrement sous le poids quand il accélère.
+/// Ce qui RESTE aussi : écrasement/étirement d'ensemble, respiration à
+/// l'arrêt, il se TOURNE vers sa direction (les yeux avancent).
 /// Tout s'applique sur l'enfant visuel (VisualSlime) : le gameplay
 /// (physique, squash du corps par SlimeController) reste inchangé.
 /// Robustesse : si le Rigidbody est absent, on déduit la vitesse de la
@@ -19,6 +19,9 @@ using UnityEngine;
 [DefaultExecutionOrder(210)]
 public class SlimeWobble : MonoBehaviour
 {
+    [Tooltip("DOIT rester FALSE sur ce projet : ce script se battait avec les animations du pack Symphonie (jitter au déplacement) et redéformait le mesh. Il est désactivé par défaut pour ne jamais pouvoir le refaire.")]
+    public bool actif = false;
+
     [Tooltip("Le visuel animé (l'enfant 'VisualSlime'). Vide = retrouvé tout seul.")]
     public Transform visual;
 
@@ -32,15 +35,23 @@ public class SlimeWobble : MonoBehaviour
     [Tooltip("Intensité de l'écrasement (0 = raide, 0.45 = très mou)")]
     public float squashForce = 0.28f;
 
-    [Header("Effets visibles (demande salim : plus d'animation !)")]
-    [Tooltip("Hauteur du hop : le slime décolle du sol en courant (0.18 = bien visible)")]
-    public float hopAmount = 0.18f;
-    [Tooltip("Balancement gauche/droite en degrés (roulis de gelée)")]
-    public float rollAmount = 16f;
-    [Tooltip("Penche vers l'avant dans sa direction de déplacement (degrés)")]
-    public float leanAmount = 14f;
+    [Header("Effets activés / désactivés (salim 2026-10-02)")]
+    [Tooltip("Hauteur du hop : le slime décolle du sol en courant (0 = PAS de sautillement, demandé par salim)")]
+    public float hopAmount = 0f;
+    [Tooltip("BALANCEMENT gauche/droite en degrés (0 = désactivé, demandé par salim)")]
+    public float rollAmount = 0f;
+    [Tooltip("PENCHEMENT vers l'avant en degrés (0 = désactivé, demandé par salim)")]
+    public float leanAmount = 0f;
     [Tooltip("Gigotement quand il tourne brusquement (force du ressort)")]
     public float jiggleStrength = 4.5f;
+
+    [Header("Corps de gelée — déformation réelle du mesh (pas mécanique)")]
+    [Tooltip("Amplitude de l'onde qui parcourt le corps (0 = pas d'onde)")]
+    public float gelOnde = 0.030f;
+    [Tooltip("De combien le corps s'étire dans sa direction quand il avance (0 = raide)")]
+    public float gelEtirement = 0.25f;
+    [Tooltip("Souplesse : plus GRAND = le gel suit vite (10 = ferme, 4 = très tout-mou)")]
+    public float gelSouplesse = 9f;
 
     Rigidbody rb;       // peut rester null → on mesure la position
     Vector3 lastPos;    // position précédente (fallback sans Rigidbody)
@@ -55,10 +66,31 @@ public class SlimeWobble : MonoBehaviour
     float jiggleVel;     // vitesse du ressort
     Vector3 dirPrev = Vector3.zero;   // direction d'avant (pour détecter les virages)
 
+    // ── Corps de gelée : état de la déformation du mesh ────────────────
+    Mesh meshInstance;      // COPIE du mesh (l'asset FBX n'est jamais touché)
+    Vector3[] restVerts;    // positions de repos, relatives au centre des bounds
+    Vector3 center;         // centre des bounds du mesh d'origine
+    Vector3 dirMesh = Vector3.forward;  // direction de déplacement, espace mesh (lissée)
+    float stretch;          // étirement courant (suit avec du retard = jello)
+    float waveT;            // phase de l'onde qui voyage le long du corps
+
     bool warnedOnce;
 
     void Start()
     {
+        // DÉSACTIVÉ : le pack Symphonie anime le slime lui-même (Animator
+        // ZSpeed/XSpeed piloté par SlimeAnimDriver). Si on laissait ce script
+        // tourner, il réécrivait localScale/localPosition/localRotation et le
+        // mesh CHAQUE frame → jitter au déplacement, surtout sur les bots.
+        // On coupe le composant : même si Unity le garde dans un préfab,
+        // il ne fait plus rien tant que « actif » n'est pas coché dans
+        // l'Inspector.
+        if (!actif)
+        {
+            enabled = false;
+            return;
+        }
+
         if (visual == null)
         {
             // Recherche directe, puis dans TOUT l'arbre (si le modèle a été renesté)
@@ -95,6 +127,37 @@ public class SlimeWobble : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         if (rb == null) rb = GetComponentInParent<Rigidbody>();
         lastPos = transform.position;
+
+        // ── Copie du mesh pour le déformer en gelée ─────────────────────
+        // On prend le MeshFilter avec le PLUS de sommets = le corps (pas les yeux).
+        // L'asset FBX est partagé et en lecture seule → on en fait une copie.
+        MeshFilter best = null;
+        foreach (MeshFilter mf in visual.GetComponentsInChildren<MeshFilter>(true))
+        {
+            if (mf.sharedMesh == null) continue;
+            if (best == null || mf.sharedMesh.vertexCount > best.sharedMesh.vertexCount)
+                best = mf;
+        }
+        if (best != null && best.sharedMesh.vertexCount <= 12000) // garde perf mobile
+        {
+            Mesh srcMesh = best.sharedMesh;
+            meshInstance = Instantiate(srcMesh);
+            meshInstance.name = srcMesh.name + "_Gel";
+            meshInstance.MarkDynamic();
+            best.mesh = meshInstance;
+
+            center = srcMesh.bounds.center;
+            restVerts = srcMesh.vertices;
+            for (int i = 0; i < restVerts.Length; i++)
+                restVerts[i] -= center;
+            Debug.Log("[SLIME-GEL] " + name + " : déformation du mesh " + srcMesh.name +
+                      " (" + restVerts.Length + " sommets)");
+        }
+        else
+        {
+            Debug.LogWarning("[SLIME-WOBBLE] " + name + " : pas de mesh déformable" +
+                             (best != null ? " (trop de sommets : " + best.sharedMesh.vertexCount + ")" : ""));
+        }
 
         // Diagnostic une fois : le log dit clairement si tout est branché
         Debug.Log("[SLIME-WOBBLE] " + name +
@@ -182,9 +245,60 @@ public class SlimeWobble : MonoBehaviour
         visual.localPosition = basePos + Vector3.up * hop *
             (visual.parent != null ? visual.parent.lossyScale.x : 1f);
 
-        // ── PENCHANT + ROULIS de gelée (en degrés, beaucoup plus forts) ─
-        float roll = Mathf.Sin(phase) * rollAmount * move01 + jiggle * 22f;
-        float lean = leanAmount * move01;   // penche vers l'avant (il "sprinte")
+        // ── Rotation : UNIQUEMENT la direction (salim : pas de penchement /
+        //    balancement → rollAmount et leanAmount sont à 0, et le
+        //    roll ne reçoit plus le gigotement des virages) ────────────
+        float roll = Mathf.Sin(phase) * rollAmount * move01;
+        float lean = leanAmount * move01;
         visual.localRotation = Quaternion.Euler(lean, yaw, roll);
+
+        // ── CORPS DE GELÉE : déformation réelle du mesh ────────────────
+        if (meshInstance != null && restVerts != null)
+        {
+            // 1) La direction est LISSÉE : un vrai gel ne change pas de
+            //    forme instantanément, il suit avec du retard.
+            if (speed > 0.4f)
+            {
+                Vector3 dirWanted = visual.InverseTransformDirection(
+                    new Vector3(vel.x, 0f, vel.z).normalized).normalized;
+                dirMesh = Vector3.Slerp(dirMesh, dirWanted,
+                                        1f - Mathf.Exp(-6f * dt)).normalized;
+            }
+
+            // 2) L'étirement suit avec du retard → quand on s'arrête,
+            //    le corps reste étiré un instant puis se relâche (jello).
+            stretch = Mathf.Lerp(stretch, gelEtirement * move01,
+                                 1f - Mathf.Exp(-gelSouplesse * dt));
+
+            // 3) L'onde voyage le long du corps, plus vite quand il va vite
+            waveT += dt * (5f + speed * 2.2f);
+
+            float amp = gelOnde * move01;                        // l'onde n'existe qu'en mouvement
+            Vector3 dir = dirMesh;
+            Vector3 side = new Vector3(dir.z, 0f, -dir.x);       // perpendiculaire à plat du sol
+
+            Vector3[] verts = meshInstance.vertices;
+            for (int i = 0; i < verts.Length; i++)
+            {
+                Vector3 p0 = restVerts[i];
+                // distance le long de la direction de déplacement
+                float along = p0.x * dir.x + p0.y * dir.y + p0.z * dir.z;
+
+                float ph = along * 2.3f - waveT;
+                // a) ÉTIREMENT : l'avant du corps est poussé vers l'avant,
+                //    l'arrière traîne derrière → forme de goutte en mouvement
+                Vector3 disp = dir * (along * stretch);
+                // b) ONDE qui parcourt le corps de la queue vers la tête
+                disp += dir * (Mathf.Sin(ph) * amp);
+                // c) ONDULATION latérale douce (déphasée, asymétrique → organique)
+                disp += side * (Mathf.Sin(ph * 0.6f + p0.y * 2.5f + along * 0.4f) * amp * 0.7f);
+                // d) LE BAS s'aplatit légèrement sous le poids en accélération
+                disp.y -= Mathf.Max(0f, -p0.y) * 0.22f * stretch;
+
+                verts[i] = center + p0 + disp;
+            }
+            meshInstance.vertices = verts;
+            meshInstance.RecalculateBounds();
+        }
     }
 }

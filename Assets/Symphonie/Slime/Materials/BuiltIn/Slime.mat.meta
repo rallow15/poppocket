@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3a8d588f9f3435b489ecdb6a9e9bcd48
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Materials/BuiltIn/Slime.mat
+  uploadId: 962786

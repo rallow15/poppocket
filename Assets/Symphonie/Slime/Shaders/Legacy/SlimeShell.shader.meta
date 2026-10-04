@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 9f963d059a2befe4cacfc66e0c68e53f
+timeCreated: 1510297206
+licenseType: Store
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Shaders/Legacy/SlimeShell.shader
+  uploadId: 962786

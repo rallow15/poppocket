@@ -17,7 +17,7 @@ public class PowerUpHud : MonoBehaviour
 
     private class Entry
     {
-        public string label;      // "⚡ VITESSE x4" etc.
+        public string label;      // "ECLAIR : VITESSE x4" etc.
         public string who;        // "Toi" / "Bot 2"
         public Color slimeColor;  // couleur du slime qui a le bonus
         public float until;       // Time.time de fin
@@ -61,26 +61,39 @@ public class PowerUpHud : MonoBehaviour
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
 
+        // salim 03/10 v3 : plus de PANNEAU derrière l'info (salim test n°2 :
+        // « un gros carré transparent apparaît » — on le retire, le texte
+        // seul avec son gros contour navy est lisible sur le jeu).
         GameObject t = new GameObject("ActiveList",
             typeof(RectTransform), typeof(TextMeshProUGUI));
         t.transform.SetParent(go.transform, false);
         RectTransform rt = t.GetComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
         rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = new Vector2(1000, 240);
-        rt.anchoredPosition = new Vector2(0, -260);   // sous le chrono
+        rt.sizeDelta = new Vector2(1040f, 300f);
+        rt.anchoredPosition = new Vector2(0f, -250f);   // sous le chrono
 
         text = t.GetComponent<TextMeshProUGUI>();
-        text.fontSize = 52;
-        text.alignment = TextAlignmentOptions.Center;
+        text.fontSize = 60;
+        text.alignment = TextAlignmentOptions.Top;
         text.raycastTarget = false;
+
+        // Style voodoo PLUS marqué : lettres dilatées + contour épais + ombre.
+        // La couleur d'affichage vient du rich text (<color=…>) ligne par ligne.
+        VoodooStyle.ApplyText(text, VoodooStyle.Blanc, 0.45f);
     }
 
     private void Update()
     {
         if (text == null) return;
         entries.RemoveAll(e => Time.time >= e.until);
-        if (entries.Count == 0) { text.text = ""; return; }
+        if (entries.Count == 0)
+        {
+            text.text = "";
+            // salim 04/10 : plus d'info power → le chrono revient
+            GameUI.SetChronoVisible(true);
+            return;
+        }
 
         string all = "";
         foreach (var e in entries)
@@ -99,10 +112,12 @@ public class PowerUpHud : MonoBehaviour
     {
         if (Instance == null || sc == null) return;
 
-        string bonus = type == PowerUpType.Speed ? "⚡ VITESSE x4"
-                     : type == PowerUpType.Aura ? "✨ AURA d'éclatement"
-                                                : "🌩️ ZAP (a figé les autres)";
-        string who = sc.isPlayer ? "TOI" : $"Bot {sc.slimeIndex}";
+        string bonus = type == PowerUpType.Speed
+            ? Trad.T("ECLAIR : VITESSE x4", "BOLT : SPEED x4")
+            : type == PowerUpType.Aura
+            ? Trad.T("CHAMPIGNON : GEANT x3", "MUSHROOM : GIANT x3")
+            : Trad.T("FLOCON : les autres sont geles", "SNOWFLAKE : the others are frozen");
+        string who = sc.isPlayer ? Trad.T("TOI", "YOU") : $"Bot {sc.slimeIndex}";
 
         var entry = new Entry
         {
@@ -115,5 +130,8 @@ public class PowerUpHud : MonoBehaviour
         // Max 4 lignes (une par slime) : la plus ancienne saute
         Instance.entries.Add(entry);
         if (Instance.entries.Count > 4) Instance.entries.RemoveAt(0);
+
+        // salim 04/10 : une info power s'affiche → on CACHE le chrono
+        GameUI.SetChronoVisible(false);
     }
 }

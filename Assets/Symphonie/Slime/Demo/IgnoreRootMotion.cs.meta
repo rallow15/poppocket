@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 60b00cf9c47761b45849510f9bb71f3b
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Demo/IgnoreRootMotion.cs
+  uploadId: 962786

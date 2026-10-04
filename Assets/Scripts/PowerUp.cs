@@ -2,16 +2,16 @@ using UnityEngine;
 
 /// <summary>
 /// Les 3 bonus du jeu (durée 3 s chacun) :
-///  - Speed : le slime va 4x plus vite
-///  - Aura  : les bulles éclatent TOUTES SEULES dans une petite zone autour du slime
-///  - Zap   : TOUS les AUTRES slimes sont gelés (seul le ramasseur peut bouger)
+///  - Speed : éclair jaune → le slime va 4x plus vite
+///  - Aura  : champignon rouge style Mario → le slime devient GEANT x3
+///  - Zap   : flocon de neige → TOUS les AUTRES slimes sont gelés
 /// Ramassable par le joueur OU les bots : il suffit de le toucher.
 /// </summary>
 public enum PowerUpType
 {
-    Speed,  // jaune  : déplacement rapide x4
-    Aura,   // rose   : éclate les bulles autour soi
-    Zap     // bleu   : étourdit tout le monde sauf toi
+    Speed,  // éclair jaune  : déplacement rapide x4
+    Aura,   // champignon    : géant x3 pendant 3 s
+    Zap     // flocon de gel : étourdit tout le monde sauf toi
 }
 
 public class PowerUp : MonoBehaviour
@@ -39,11 +39,15 @@ public class PowerUp : MonoBehaviour
         SlimeController sc = other.GetComponentInParent<SlimeController>();
         if (sc == null) return; // ce n'est pas un slime
 
-        // HUD : une ligne en haut de l'écran avec les secondes qui défilent
-        // et QUI a pris le bonus (Toi / Bot 1 / Bot 2 / Bot 3)
+        // FIX (salim 03/10 : « quand tu prend champignon tu grossi pas ») :
+        // l'EFFET est appliqué EN PREMIER — si l'affichage HUD plantait, le
+        // grossissement ne devait jamais rater à cause de lui.
+        PowerUpManager.Apply(type, sc);
+
+        // HUD ensuite : une ligne en haut de l'écran, QUI a pris le bonus
+        // (Toi / Bot 1 / Bot 2 / Bot 3) + les secondes qui défilent.
         PowerUpHud.Show(type, sc);
 
-        PowerUpManager.Apply(type, sc);
         PowerUpManager.PlayBonusSound();
         Debug.Log("[POWER-UP] Ramassé : " + type + " par " +
                   (sc.isPlayer ? "le joueur !" : "un bot !"));

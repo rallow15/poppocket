@@ -28,7 +28,8 @@ public class GameManager : MonoBehaviour
     public MonoBehaviour playerJoystick;
 
     [Header("Règles du jeu")]
-    public int roundDuration = 60;   // secondes par round
+    [Tooltip("Secondes par round (forcé à 30 dans Awake : la scène enregistre 60, salim 03/10)")]
+    public int roundDuration = 30;
     public int totalRounds = 3;      // nombre de rounds
     [Tooltip("Positions de départ des 4 slimes (assignées dans l'éditeur)")]
     public Transform[] startPositions = new Transform[4];
@@ -55,6 +56,12 @@ public class GameManager : MonoBehaviour
             return;
         }
         Instance = this;
+
+        // PIÈGE DE SÉRIALISATION : la scène MainScene enregistre l'ANCIENNE
+        // valeur (60) dans son fichier. Tant qu'on ne ré-écrit pas la scène,
+        // elle écrase le default du script. On remet 30 ICI, à l'exécution :
+        // rien ne peut plus la perdre (même schéma que le botForce des bots).
+        if (roundDuration != 30) roundDuration = 30;   // salim : 30 s par partie
     }
 
     private void OnDestroy()
@@ -183,7 +190,7 @@ public class GameManager : MonoBehaviour
                 int winnerIndex = GetWinnerIndex();
                 int winnerScore = scores[winnerIndex];
                 string winnerName = winnerIndex == 0
-                    ? "TOI"
+                    ? Trad.T("TOI", "YOU")
                     : $"Bot {winnerIndex}";
 
                 gameUI.ShowWinner(winnerName, winnerScore);
@@ -223,6 +230,10 @@ public class GameManager : MonoBehaviour
 
         int idx = Mathf.Clamp(slime.slimeIndex, 0, scores.Length - 1);
         scores[idx] += points;
+
+        // SHOP (salim 03/10) : chaque bulle éclatée par le JOUEUR donne
+        // aussi des PIECES pour le shop de skins (1 pièce par bulle).
+        if (slime.isPlayer) ShopManager.AjouterPieces(ShopManager.PiecesParBulle * points);
 
         if (gameUI != null) gameUI.UpdateScores(scores, CurrentRound);
     }

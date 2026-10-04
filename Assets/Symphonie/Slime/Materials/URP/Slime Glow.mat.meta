@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 48b5bb10d7a97c742bbf6f0d496ce00d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Materials/URP/Slime Glow.mat
+  uploadId: 962786

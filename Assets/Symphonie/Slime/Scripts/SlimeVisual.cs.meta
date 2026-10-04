@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 5069a747ebb4ac644acb5ce8e9d56915
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Scripts/SlimeVisual.cs
+  uploadId: 962786

@@ -2,8 +2,8 @@ using UnityEngine;
 using System.Collections;
 
 /// <summary>
-/// Une bulle du tapis posée au sol (collider STATIQUE : le slime qui roule
-/// dessus déclenche la collision, pas besoin de Rigidbody sur 400 bulles).
+/// Une bulle du tapis posée au sol (collider TRIGGER : le slime ne se cogne
+/// JAMAIS physiquement dedans, il roule à travers — détection en OnTriggerEnter).
 ///
 /// Le côté ASMR "satisfaisant" :
 ///   • le slime la touche → la bulle S'ÉCRASE un instant (squish),
@@ -28,6 +28,10 @@ public class Bubble : MonoBehaviour
     public float minPitch = 0.85f;
     public float maxPitch = 1.15f;
 
+    [Header("Couleur de l'éclat")]
+    [Tooltip("Teinte des gouttes d'eau = celle de LA bulle qui éclate (posée par BubbleSpawner)")]
+    public Color teinteEau = new Color(0.62f, 0.90f, 0.98f);
+
     [Header("Feel ASMR - écrasement avant l'éclatement")]
     [Tooltip("Durée du squish (la bulle s'aplatit) avant le POP")]
     public float squashTime = 0.08f;
@@ -45,18 +49,20 @@ public class Bubble : MonoBehaviour
         baseScale = transform.localScale;   // l'échelle posée par le spawner
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private void OnTriggerEnter(Collider other)
     {
         if (popped || squashing) return;
 
         // Seuls les objets taggés "Slime" peuvent écraser / éclater la bulle
-        if (!collision.gameObject.CompareTag("Slime")) return;
+        if (!other.CompareTag("Slime")) return;
 
-        float impactSpeed = collision.relativeVelocity.magnitude;
+        // Vitesse du slime au moment du contact (le trigger donne le Rigidbody attaché)
+        Rigidbody rb = other.attachedRigidbody;
+        float impactSpeed = rb != null ? rb.linearVelocity.magnitude : 0f;
         if (impactSpeed < minImpactVelocity * 0.35f) return;   // contact négligeable
 
         squashing = true;
-        StartCoroutine(SquashThenPop(collision.gameObject, impactSpeed));
+        StartCoroutine(SquashThenPop(other.gameObject, impactSpeed));
     }
 
     /// <summary>
@@ -113,11 +119,25 @@ public class Bubble : MonoBehaviour
         // 1) Son "pop" aléatoire parmi les 3 clips
         PlayPopSound();
 
-        // 2) Éclaboussure d'eau (participe teinté bleu eau)
-        if (popParticlePrefab != null)
+        // 2) ÉCLAT DE BULLE (salim 04/10 : pack « Stylized Water Effect ») :
+        //    l'effet Bubbles_Burst du pack NamuFX, copié en Resources
+        //    (original du pack jamais touché). Son shader est URP-en-pratique
+        //    → ROSE en Built-in : on garde ses ANIMATIONS mais on remplace
+        //    ses matériaux par notre shader Built-in + le dessin du pack
+        //    (EclatEau.ReparePack). Si le pack est absent : notre éclat
+        //    d'eau 100 % code (EclatEau.cs).
+        GameObject effet = Resources.Load<GameObject>("Effets/BubblesBurst");
+        if (effet != null)
         {
-            var burst = Instantiate(popParticlePrefab, transform.position, Quaternion.identity);
-            MakeSplashWater(burst);
+            var burst = Instantiate(effet, transform.position, Quaternion.identity);
+            // salim 04/10 : « la même couleur que les bulles à éclater » :
+            // on passe la teinte de CETTE bulle aux gouttes d'eau
+            EclatEau.ReparePack(burst, teinteEau);   // fini le rose : shader Built-in
+            Object.Destroy(burst, 1.4f);   // stopAction du pack = None → on nettoie nous-même
+        }
+        else
+        {
+            EclatEau.Cree(transform.position, teinteEau);
         }
 
         // 3) +1 au score du slime responsable
@@ -129,30 +149,6 @@ public class Bubble : MonoBehaviour
 
         // 4) La bulle disparaît
         Destroy(gameObject);
-    }
-
-    /// <summary>
-    /// Teinte les particules de l'explosion en COULEUR D'EAU (bleu clair),
-    /// pour une vraie éclaboussure de goutte qui éclate.
-    /// </summary>
-    private static void MakeSplashWater(GameObject burst)
-    {
-        Color eau = new Color(0.70f, 0.92f, 1f, 0.85f);   // goutte d'eau claire
-
-        var ps = burst.GetComponent<ParticleSystem>();
-        if (ps != null)
-        {
-            var main = ps.main;
-            main.startColor = new ParticleSystem.MinMaxGradient(eau);
-        }
-        foreach (var childPs in burst.GetComponentsInChildren<ParticleSystem>(true))
-        {
-            if (childPs == ps) continue;
-            var m = childPs.main;
-            m.startColor = new ParticleSystem.MinMaxGradient(eau);
-        }
-        foreach (var pr in burst.GetComponentsInChildren<ParticleSystemRenderer>(true))
-            pr.material.color = eau;
     }
 
     /// <summary>Joue un son pop via un AudioManager central (sinon via une source locale).</summary>

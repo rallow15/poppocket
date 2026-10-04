@@ -80,7 +80,11 @@ public class BubbleSpawner : MonoBehaviour
                 // Déborde de l'arène sur les rangées décalées ? on recentre dans le mur
                 if (x > halfX - cellX * 0.45f) x = halfX - cellX * 0.45f;
 
-                SpawnDome(new Vector3(x, domeScaleY * 0.5f, z), layerBubble);
+                // SINK (salim 03/10 : « les bulles sont pas intégrées, on
+                // aurait dit un truc posé ») : la bulle est posée un peu
+                // PLUS BAS que son centre exact → le bas rentre dans le
+                // sol, elle vit DANS le tapis au lieu de flotter.
+                SpawnDome(new Vector3(x, domeScaleY * 0.40f, z), layerBubble);
                 spawned++;
             }
         }
@@ -101,15 +105,40 @@ public class BubbleSpawner : MonoBehaviour
         SphereCollider sc = dome.AddComponent<SphereCollider>();
         sc.radius = 0.5f;
         sc.center = Vector3.zero;
+        // BULLE D'EAU FLUIDE : trigger = le slime ne se cogne JAMAIS dedans.
+        // Il roule à travers, la bulle éclate au contact (détecté par OnTriggerEnter).
+        sc.isTrigger = true;
 
         MeshRenderer mrenderer = dome.GetComponent<MeshRenderer>();
-        mrenderer.sharedMaterial = domeMaterials != null
-            ? domeMaterials[Random.Range(0, domeMaterials.Length)]
-            : null;
+        int choisi = domeMaterials != null && domeMaterials.Length > 0
+            ? Random.Range(0, domeMaterials.Length) : -1;
+        mrenderer.sharedMaterial = choisi >= 0 ? domeMaterials[choisi] : null;
 
-        dome.transform.localScale = new Vector3(domeScaleXZ, domeScaleY, domeScaleXZ);
+        // PetiteVariation : chaque bulle a une taille un peu différente
+        // (tapis de film à bulles RÉEL : pas un millier de clones identiques)
+        float vari = Random.Range(0.85f, 1.05f);
+        dome.transform.localScale = new Vector3(domeScaleXZ * vari, domeScaleY * 0.92f, domeScaleXZ * vari);
         dome.transform.position = pos;
         dome.transform.SetParent(bubbleContainer, true);
+
+        // OMBRE DE CONTACT : un rond sombre doux posé sur le sol DERRIÈRE la
+        // bulle. La bulle « touche » le sol au lieu de flotter au-dessus.
+        GameObject ombre = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        Destroy(ombre.GetComponent<Collider>());
+        UnityEngine.MeshFilter mf = ombre.GetComponent<MeshFilter>();
+        Vector3 tailleMesh = mf != null && mf.sharedMesh != null
+            ? mf.sharedMesh.bounds.size : Vector3.one;
+        ombre.GetComponent<MeshRenderer>().sharedMaterial =
+            ArenaDesign.MatOmbreBulle();
+        ombre.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);   // face vers le haut
+        float tailleOmbre = domeScaleXZ * vari * 1.6f;
+        ombre.transform.localScale = new Vector3(tailleOmbre / tailleMesh.x,
+                                                 tailleOmbre / tailleMesh.y, 1f);
+        ombre.transform.position = new Vector3(pos.x, 0.012f, pos.z);
+        // ENFANT de la bulle (pas du container) : au pop (.Destroy(gameObject)
+        // dans Bubble.cs), l'ombre part AVEC elle — jamais d'ombre orpheline.
+        // En plus, elle squishe pendant l'écrasement : encore plus réaliste.
+        ombre.transform.SetParent(dome.transform, true);
 
         if (layerBubble >= 0) dome.layer = layerBubble;
 
@@ -123,6 +152,10 @@ public class BubbleSpawner : MonoBehaviour
             bub.minPitch = settingsSource.minPitch;
             bub.maxPitch = settingsSource.maxPitch;
         }
+        // salim 04/10 : les gouttes de l'éclat prennent la couleur de
+        // CETTE bulle (chacune des 3 teintes d'eau passe ses gouttes)
+        if (mrenderer.sharedMaterial != null)
+            bub.teinteEau = mrenderer.sharedMaterial.color;
     }
 
     /// <summary>
@@ -139,11 +172,15 @@ public class BubbleSpawner : MonoBehaviour
         Shader shader = Shader.Find("Standard");
         if (shader == null) return;   // pas de fallback opaque : on veut du translucide
 
+        // salim 03/10 : « le sol et les bulles font qu'un » → les 3 teintes
+        // sont resserrées dans la MÊME famille azzurro que le fond de cuve
+        // (ArenaDesign.MatCuve) : plus de bulle "différente", les bulles se
+        // fondent dans le sol et le tout vit ensemble.
         Color[] teintes = new Color[]
         {
-            new Color(0.70f, 0.92f, 1.00f, 0.50f),   // eau claire (bleu très pâle)
-            new Color(0.55f, 0.95f, 0.95f, 0.48f),   // eau turquoise
-            new Color(0.60f, 0.80f, 1.00f, 0.55f),   // eau bleue
+            new Color(0.62f, 0.90f, 0.98f, 0.45f),   // eau claire du centre
+            new Color(0.58f, 0.86f, 0.96f, 0.42f),   // eau du milieu
+            new Color(0.55f, 0.84f, 0.98f, 0.47f),   // eau du bord
         };
 
         domeMaterials = new Material[teintes.Length];

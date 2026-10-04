@@ -36,15 +36,14 @@ public class SlimeController : MonoBehaviour
     public float retargetDelay = 1.5f;
 
     [Header("Power-ups (durée 3 s, posés par PowerUpManager)")]
-    [Tooltip("Rayon de l'AURA : les bulles dedans éclatent toutes seules")]
+    [Tooltip("(Ancien rayon AURA — gardé pour le prefab, plus utilisé)")]
     public float auraRadius = 2.5f;
 
     // --- Power-ups : actifs tant que Time.time < ces dates (3 s chacun) ---
     private float speedUntil = -1f;     // bonus VITESSE
-    private float auraUntil = -1f;      // bonus AURA
+    private float giantUntil = -1f;     // bonus CHAMPIGNON : géant x3
+    private bool giantActive;
     private float stunnedUntil = -1f;   // reçu un ZAP : gelé
-    private Transform auraDisc;         // disque rose sous le slime pendant l'aura
-    private bool auraShown;
 
     // --- Références ---
     private Rigidbody rb;
@@ -67,6 +66,13 @@ public class SlimeController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         squashBaseScale = transform.localScale;
+
+        // SÉCURITÉ : le fichier préfab a déjà été re-sauvegardé par Unity
+        // avec la vieille valeur (botForce 15 → bots à 1,8 m/s, en dessous
+        // du seuil d'éclatement des bulles → ils vibrent et ne pètent rien).
+        // On remet la bonne valeur ICI, à l'exécution : plus rien ne peut
+        // la perdre, même si Unity re-écrit le préfab.
+        if (isPlayer == false && botForce < 32f) botForce = 32f;
 
         // FLUIDITÉ : le Rigidbody est interpolé entre 2 pas de physique
         // → le slime glisse à l'écran au lieu de "sautiller" à 60 Hz fixes.
@@ -103,7 +109,7 @@ public class SlimeController : MonoBehaviour
                         ForceMode.Acceleration);
         }
 
-        TickAura(); // l'aura éclate les bulles autour du slime (si active)
+        TickGiant(); // champignon : le slime grossit x3 tant que c'est actif
 
         // ZAP reçu : le slime est gelé, il ne peut RIEN faire
         if (Time.time < stunnedUntil)
@@ -202,10 +208,12 @@ public class SlimeController : MonoBehaviour
         toTarget.y = 0f;
 
         // Petit bruit d'hésitation : le bot dévie un peu de sa trajectoire
-        // (rend les bots "casual" — parfait pour un party game familial)
+        // (rend les bots "casual" — parfait pour un party game familial).
+        // Amplitude réduite (0,5) : avec 1,5 le bot perdait trop de vitesse
+        // en zigzaguant et n'atteignait jamais le seuil d'éclatement des bulles.
         float wobble = Mathf.PerlinNoise(Time.time * 3f, slimeIndex * 10f) - 0.5f;
         Vector3 perpendicular = Vector3.Cross(toTarget.normalized, Vector3.up);
-        toTarget += perpendicular * (wobble * 1.5f);
+        toTarget += perpendicular * (wobble * 0.5f);
 
         if (toTarget.sqrMagnitude > 0.1f)
         {
@@ -219,14 +227,36 @@ public class SlimeController : MonoBehaviour
     /// <summary>Bonus VITESSE : le slime va 4 fois plus vite pendant la durée.</summary>
     public void ApplySpeedBoost(float duration) { speedUntil = Time.time + duration; }
 
-    /// <summary>Bonus AURA : les bulles proches éclatent toutes seules.</summary>
-    public void ApplyAura(float duration) { auraUntil = Time.time + duration; }
+    /// <summary>
+    /// Bonus CHAMPIGNON (salim 03/10 : « pour le power up aura change le fait
+    /// juste grossir le slime 3 fois ca taille ») → GEANT x3 pendant la durée.
+    /// </summary>
+    public void ApplyGiant(float duration) { giantUntil = Time.time + duration; }
 
     /// <summary>Bonus ZAP reçu : ce slime est gelé pendant la durée.</summary>
     public void ApplyStun(float duration) { stunnedUntil = Time.time + duration; }
 
     /// <summary>×4 quand le bonus VITESSE est actif, sinon ×1.</summary>
     private float PowerFactor => Time.time < speedUntil ? 4f : 1f;
+
+    /// <summary>
+    /// PROGRESSION (demande de salim, 03/10) : « les bots légèrement
+    /// plus fort » quand on monte de niveau. Chaque niveau :
+    ///   • bots +18 % plus rapides (plafonné à ×2 pour rester fair-play)
+    ///   • ils hésitent 15 % moins longtemps (réaction plus vive)
+    ///   • leur radar de bulles s'élargit un peu
+    /// Appelé par GameManager.SpawnSlimes sur CHAQUE bot, au spawn.
+    /// Le joueur, lui, ne change jamais : c'est l'arène qui devient
+    /// plus dure, pas ton slime plus rapide.
+    /// </summary>
+    public void AppliquerNiveau(int niveau)
+    {
+        if (niveau <= 1) return;
+        float forceMul = Mathf.Min(1f + 0.18f * (niveau - 1), 2f);
+        botForce *= forceMul;
+        retargetDelay = Mathf.Max(0.4f, retargetDelay * (1f - 0.15f * (niveau - 1)));
+        detectionRadius = Mathf.Min(detectionRadius * (1f + 0.15f * (niveau - 1)), 55f);
+    }
 
     /// <summary>
     /// Cible de l'IA : la bulle la plus proche, OU un power-up pas trop loin
@@ -245,51 +275,30 @@ public class SlimeController : MonoBehaviour
     }
 
     /// <summary>
-    /// AURA active : éclate toutes les bulles dans le rayon autour du slime.
-    /// Chaque bulle apporte +1 au PROPRIÉTAIRE de l'aura (joueur ou bot).
+    /// CHAMPIGNON actif : le slime devient GEANT (x3) tant que le bonus dure,
+    /// puis reprend sa taille normale (demande de salim, 03/10 : l'ancienne
+    /// AURA qui éclatait les bulles est remplacée par ce grossissement).
+    /// Astuce : on multiplie squashBaseScale par 3 — le squash & stretch
+    /// continue de marcher pendant qu'il est géant.
     /// </summary>
-    private void TickAura()
+    private void TickGiant()
     {
-        // gelé par un ZAP : l'aura s'arrête aussi
-        bool active = Time.time < auraUntil && Time.time >= stunnedUntil;
-        SetAuraVisual(active);
-        if (!active) return;
+        bool active = Time.time < giantUntil && Time.time >= stunnedUntil;
+        if (giantActive == active) return;
+        giantActive = active;
 
-        int bubbleLayer = LayerMask.NameToLayer("Bubble");
-        int mask = bubbleLayer >= 0 ? (1 << bubbleLayer) : ~0;
-        Collider[] hits = Physics.OverlapSphere(transform.position, auraRadius, mask);
-        foreach (Collider col in hits)
+        if (active)
         {
-            Bubble b = col.GetComponent<Bubble>();
-            if (b != null) b.Pop(gameObject); // le score va à CE slime
+            squashBaseScale *= 3f;   // géant : le squash suit la même base
+            transform.localScale = squashBaseScale;  // GROSSIT TOUT DE SUITE
+            Debug.Log("[CHAMPIGNON] " + name + " devient GEANT !");
         }
-    }
-
-    /// <summary>Grand disque rose lumineux sous le slime pendant l'aura.</summary>
-    private void SetAuraVisual(bool show)
-    {
-        if (auraShown == show) return;
-        auraShown = show;
-
-        if (show && auraDisc == null)
+        else
         {
-            GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(disc.GetComponent<CapsuleCollider>()); // jamais de collision fantôme
-            disc.name = "AuraZone";
-            disc.transform.SetParent(transform, false);
-            disc.transform.localPosition = new Vector3(0f, 0.05f, 0f);
-            disc.transform.localScale = new Vector3(auraRadius * 2f, 0.015f, auraRadius * 2f);
-            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (shader == null) shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null) shader = Shader.Find("Standard");
-            var mat = new Material(shader);
-            Color c = new Color(1f, 0.45f, 0.85f, 0.35f); // rose translucide
-            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
-            mat.color = c;
-            disc.GetComponent<MeshRenderer>().material = mat;
-            auraDisc = disc.transform;
+            squashBaseScale /= 3f;   // retour taille normale (ramolli par ResetSquash)
+            transform.localScale = squashBaseScale;
+            Debug.Log("[CHAMPIGNON] " + name + " redevient normal.");
         }
-        if (auraDisc != null) auraDisc.gameObject.SetActive(show);
     }
 
     /// <summary>true tant que le slime touche le sol (raycast sphère vers le bas).</summary>
@@ -319,12 +328,22 @@ public class SlimeController : MonoBehaviour
             if (col.GetComponent<Bubble>() == null) continue;
 
             float d = (col.transform.position - transform.position).sqrMagnitude;
+
+            // FIX « bots figés au spawn » : la bulle PILE SOUS LES PIEDS
+            // (à moins d'un mètre) est ignorée. Le radar la choisissait
+            // (c'est la plus proche !) mais HandleBotAI n'applique sa force
+            // qu'au-delà de 0,32 m → le bot restait immobile POUR TOUJOURS
+            // sur sa bulle de coin. En l'ignorant, il vise celle d'à côté
+            // (1,3 m sur la grille) : il a la place d'accélérer et l'éclate.
+            if (d < 1.0f) continue;
+
             if (d < bestDist)
             {
                 bestDist = d;
                 nearest = col.transform;
             }
         }
+
         return nearest;
     }
 
@@ -361,8 +380,8 @@ public class SlimeController : MonoBehaviour
         currentTarget = null;
 
         // Nettoie tous les effets power-up au début d'un nouveau round
-        speedUntil = auraUntil = stunnedUntil = -1f;
-        SetAuraVisual(false);
+        speedUntil = giantUntil = stunnedUntil = -1f;
+        if (giantActive) { giantActive = false; squashBaseScale /= 3f; }
         smoothInput = Vector2.zero;   // on repart du repos (pas de glisse fantôme)
     }
 }

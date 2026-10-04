@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: a3389ef95d99ff5408c6027072e3e015
+timeCreated: 1510303700
+licenseType: Store
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Scripts/Legacy/SlimeCore.cs
+  uploadId: 962786

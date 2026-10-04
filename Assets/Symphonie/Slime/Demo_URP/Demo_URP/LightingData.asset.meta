@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8960e794415f5354f8e0840e7559a5ff
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 112000000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Demo_URP/Demo_URP/LightingData.asset
+  uploadId: 962786

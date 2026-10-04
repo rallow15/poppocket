@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0f476ec0d07106f48a1afbf9099fc714
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Demo_URP/Materials/Green.mat
+  uploadId: 962786

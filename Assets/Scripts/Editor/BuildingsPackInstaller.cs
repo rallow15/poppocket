@@ -5,13 +5,13 @@ using UnityEditor.SceneManagement;
 using System.Collections.Generic;
 
 /// <summary>
-/// Pose les VRAIS bâtiments du pack Asset Store « Cartoon Buildings »
-/// (Garage / Station-service / Station) tout autour de l'environnement,
-/// JAMAIS sur l'arène. Remplace les maisons-cubes ("MaisonsVillage").
-///
-/// Les matériaux du pack peuvent porter un shader absent du projet
-/// (URP ici absent) → ROSE. `UrpMaterialConverter` répare tout seul
-/// chaque matériau en le rebranchant sur le shader du projet. Idempotent.
+/// salim (03/10) : « je veux plus les maison gas station » — plus AUCUN
+/// décor de bâtiments autour de l'arène : ni le village de cubes
+/// ("MaisonsVillage"), ni les Garage/Station-service du pack
+/// "Cartoon Buildings" ("Batiments").
+/// L'ancien installateur qui les plaçait a été retiré : ce script
+/// SUPPRIME ce qui traîne encore dans la scène, une fois, et ne pose
+/// plus jamais rien.
 /// </summary>
 [InitializeOnLoad]
 public static class BuildingsPackInstaller
@@ -21,7 +21,7 @@ public static class BuildingsPackInstaller
         EditorApplication.delayCall += Run;
     }
 
-    [MenuItem("POPPOCKET/4. Bâtiments du pack (Asset Store)")]
+    [MenuItem("POPPOCKET/4. Retirer les maisons & bâtiments")]
     public static void RunFromMenu() => Run();
 
     public static void Run()
@@ -29,48 +29,30 @@ public static class BuildingsPackInstaller
         if (EditorApplication.isPlaying) return;
         if (GameUpgradeInstaller.EnsureGameSceneOpen()) return;
 
-        // Déjà installé ? On vérifie juste que leurs matériaux ne sont pas roses.
-        var existingBat = GameObject.Find("Batiments");
-        if (existingBat != null)
+        bool removed = false;
+
+        // Les stations/garages posés par l'ancien installateur
+        var bat = GameObject.Find("Batiments");
+        if (bat != null)
         {
-            if (UrpMaterialConverter.Convert(existingBat))
-            {
-                EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-                EditorSceneManager.SaveOpenScenes();
-                Debug.Log("[BATIMENTS-URP] Matériaux des bâtiments réparés ✔ (plus de rose !)");
-            }
-            return;
+            Object.DestroyImmediate(bat);
+            removed = true;
         }
 
-        List<GameObject> models = FindBuildingPrefabs();
-        if (models.Count == 0)
+        // Le village de maisons-cubes (s'il revient jamais)
+        var village = GameObject.Find("MaisonsVillage");
+        if (village != null)
         {
-            Debug.Log(
-                "[BATIMENTS-PACK] Le pack « Cartoon Buildings » n'est pas encore importé. " +
-                "Dans Unity : Window > Package Manager > My Assets > Cartoon Buildings > " +
-                "Download > Import. Dès l'import, les bâtiments se placeront TOUT SEULS 🏪 (les maisons-cubes gardent la place en attendant)");
-            return;
+            Object.DestroyImmediate(village);
+            removed = true;
         }
 
-        // ── Les VRAIS bâtiments remplacent les maisons-cubes ─────────
-        GameObject oldVillage = GameObject.Find("MaisonsVillage");
-        if (oldVillage != null) Undo.DestroyObjectImmediate(oldVillage);
-
-        float half = GameUpgradeInstaller.ArenaHalfForDecor();
-        var root = new GameObject("Batiments");
-
-        // ── 2 anneaux autour de l'arène (jamais dessus) ──────────────
-        // anneau 1 : proche (au-delà du rayon des animaux)
-        // anneau 2 : plus loin (l'environnement est habillé de partout)
-        int count = 0;
-        count += PlaceRing(root, models, half, 8, half + 6.5f, half + 9.5f);
-        count += PlaceRing(root, models, half, 6, half + 10.5f, half + 14.0f);
-
-        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        EditorSceneManager.SaveOpenScenes();
-        Debug.Log("[BATIMENTS-PACK] " + count + " bâtiments du pack placés partout autour " +
-                  "(Garage + Station-service + Station en plusieurs exemplaires) — " +
-                  "RIEN sur l'arène ✔ 🏪⛽");
+        if (removed)
+        {
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            EditorSceneManager.SaveOpenScenes();
+            Debug.Log("[BATIMENTS-PACK] Maisons et gas stations retirées de la scène ✔");
+        }
     }
 
     /// <summary>

@@ -46,6 +46,56 @@ public class AudioManager : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
+    // ────────────────────────────────────────────────────────────────
+    //  SON DU TELEPHONE (salim 04/10 : « prend en compte le son du
+    //  telephone si desactiver son jeux aussi ») : si le téléphone est
+    //  muet (volume média à zéro), le jeu ne fait plus AUCUN son.
+    //  Volume média vérifié toutes les 0,5 s (pas chaque son, trop cher).
+    //  + réglage manuel SON OUI/NON dans les réglages (PlayerPrefs "Son").
+    // ────────────────────────────────────────────────────────────────
+    private static float prochaineVerification;   // Time.unscaledTime du prochain check
+    private static bool telephoneMuet;            // résultat du dernier check
+
+    /// <summary>Vrai si on a le DROIT de jouer un son maintenant.</summary>
+    public static bool SonAutorise()
+    {
+        if (PlayerPrefs.GetInt("Son", 1) == 0) return false;   // réglage NON
+        if (Time.unscaledTime >= prochaineVerification)
+        {
+            telephoneMuet = LireVolumeTelephone() <= 0;
+            prochaineVerification = Time.unscaledTime + 0.5f;
+        }
+        return !telephoneMuet;
+    }
+
+    /// <summary>
+    /// Volume MÉDIA du téléphone (STREAM_MUSIC sur Android). 0 = muet.
+    /// Éditeur/iOS : toujours 100 (pas de lecture possible → on laisse actif).
+    /// </summary>
+    private static int LireVolumeTelephone()
+    {
+#if UNITY_EDITOR || UNITY_IOS
+        return 100;
+#elif UNITY_ANDROID
+        try
+        {
+            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+            using (var context = activity.Call<AndroidJavaObject>("getApplicationContext"))
+            using (var audio = context.Call<AndroidJavaObject>("getSystemService", "audio"))
+            {
+                return audio.Call<int>("getStreamVolume", 3);   // 3 = STREAM_MUSIC
+            }
+        }
+        catch (System.Exception)
+        {
+            return 100;   // en cas de souci : mieux vaut faire du son que rien
+        }
+#else
+        return 100;
+#endif
+    }
+
     /// <summary>
     /// Joue un clip via le pool. Si toutes les sources sont occupées,
     /// vole la plus ancienne (pool circulaire).
@@ -53,6 +103,7 @@ public class AudioManager : MonoBehaviour
     public void PlayPop(AudioClip clip, float pitch = 1f, float volume = 1f)
     {
         if (clip == null) return;
+        if (!SonAutorise()) return;   // téléphone muet ou réglage NON → silence
 
         AudioSource src = pool[poolIndex];
         poolIndex = (poolIndex + 1) % pool.Length; // tour de pool circulaire

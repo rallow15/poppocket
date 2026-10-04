@@ -5,7 +5,8 @@ using UnityEditor.SceneManagement;
 
 /// <summary>
 /// Installe TOUT ce que salim a demandé (idempotent, tout en code) :
-///   1. MAISONS autour de l'arène (village mignon, low-poly, pas de colliders)
+///   1. (REtiré 03/10) plus de MAISONS ni de bâtiments autour de l'arène
+///      — voir BuildingsPackInstaller qui nettoie la scène
 ///   2. ANIMAUX qui se promènent autour de l'arène (script Wanderer)
 ///   3. MENU DE DÉPART (objet StartMenu : écran POP POCKET + bouton JOUER)
 ///   4. HUD POWER-UP (objet PowerUpHud : secondes qui défilent + qui l'a pris)
@@ -70,6 +71,15 @@ public static class GameUpgradeInstaller
     //  1. LE VILLAGE : MAISONS AUTOUR DE L'ARÈNE
     // ────────────────────────────────────────────────────────────────
     private static void BuildVillage()
+    {
+        // salim (03/10) : « je veux plus les maison gas station » — plus
+        // AUCUN décor de bâtiments : ni ce village de cubes, ni les bâtiments
+        // du pack. Le nettoyage (suppression de ce qui reste dans la scène)
+        // est fait par BuildingsPackInstaller.Run(), qui tourne aussi au
+        // chargement de l'éditeur. On ne construit plus rien ici.
+    }
+
+    private static void BuildVillage_OLD()
     {
         // Les vrais bâtiments du pack sont là ("Batiments") : on garde,
         // on ne remet PAS les maisons-cubes par-dessus.

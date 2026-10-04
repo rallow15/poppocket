@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 46da422a296667f4294f34d53bc1aefb
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 396460
+  packageName: CartoonJellySlime
+  packageVersion: 1.0.0
+  assetPath: Assets/Symphonie/Slime/Shaders/Misc/SlimeURP_ShadowCaster.shader
+  uploadId: 962786

@@ -1,0 +1,110 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Slime
+  m_Shader: {fileID: 4800000, guid: 21fcd4ccfc208cf41866e59b5e622a45, type: 3}
+  m_ValidKeywords:
+  - _SHOWCORE_ON
+  m_InvalidKeywords:
+  - _SHOWCORE1_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ScatterLUT:
+        m_Texture: {fileID: 2800000, guid: fa96176ad89090848ae0c7dd49b93399, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _BumpScale: 1
+    - _CoreRadius: 0.1
+    - _CoreScatterCurve: 3
+    - _CoreScatterScale: 0.01
+    - _Cutoff: 0.5
+    - _DetailNormalMapScale: 1
+    - _DstBlend: 0
+    - _GlossMapScale: 1
+    - _Glossiness: 0.5
+    - _GlossyReflections: 1
+    - _Metallic: 0
+    - _Mode: 0
+    - _OcclusionStrength: 1
+    - _Parallax: 0.02
+    - _RefractETA: 0.95
+    - _RefractionScatter: 1
+    - _ScatterTintAbsortion: 0.95
+    - _ScatterTintFadeCurve: 5
+    - _ShowCore: 1
+    - _ShowCore1: 1
+    - _Size: 1
+    - _Smoothness: 0.9
+    - _SmoothnessTextureChannel: 0
+    - _SpecularHighlights: 1
+    - _SrcBlend: 1
+    - _SurfaceDiffuseWeight: 0.1
+    - _UVSec: 0
+    - _UseFakeEnvironment: 0
+    - _UseFakeReflection: 0
+    - _UseScatterTint: 0
+    - _UseScatterTint2: 0
+    - _ZWrite: 1
+    - __dirty: 1
+    m_Colors:
+    - _Color: {r: 0.37647057, g: 0.57254905, b: 0.8392157, a: 1}
+    - _CoreEmmision: {r: 0, g: 0, b: 0, a: 1}
+    - _CorePosition: {r: 0, g: 0, b: 0, a: 0}
+    - _CoreTint: {r: 0.41509432, g: 0.41509432, b: 0.41509432, a: 1}
+    - _DomeBottom: {r: 0.53932077, g: 0.7290818, b: 0.794, a: 1}
+    - _DomeTop: {r: 0.10912846, g: 0.16509183, b: 0.305, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _Ground: {r: 0.1764706, g: 0.16862746, b: 0.14117648, a: 1}
+    - _ScatterTintColor: {r: 1, g: 0.7698327, b: 0, a: 1}
+  m_BuildTextureStacks: []

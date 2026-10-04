@@ -9,12 +9,16 @@ using UnityEngine;
 [DefaultExecutionOrder(200)]
 public class SlimeRecolor : MonoBehaviour
 {
+    [Tooltip("DOIT rester FALSE sur ce projet : ce script écrasait le look gelée du pack Symphonie par des couleurs pleines. Il est désactivé par défaut pour ne jamais pouvoir le refaire.")]
+    public bool actif = false;
+
     public Material[] bodyByIndex;   // une couleur de corps par slime
     public Material eyesMaterial;    // matériau des yeux (non modifié)
     bool applied;
 
     void Update()
     {
+        if (!actif) return;   // DÉSACTIVÉ : le look vient du pack Symphonie maintenant
         if (applied) return;   // une seule fois : l'index ne change pas en jeu
         var sc = GetComponent<SlimeController>();
         if (sc == null) return;   // pas un slime de jeu → rien à faire

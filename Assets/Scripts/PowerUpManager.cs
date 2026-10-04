@@ -3,13 +3,15 @@ using UnityEngine;
 
 /// <summary>
 /// Système de power-ups : UN SEUL bonus à la fois, qui apparaît toutes les
-/// 30 secondes à un endroit au hasard de l'arène. Si personne ne le ramasse,
-/// il disparaît quand le suivant arrive. Joueur ET bots peuvent les prendre.
+/// 15 secondes (salim, 03/10) à un endroit au hasard de l'arène. Si personne
+/// ne le ramasse, il disparaît quand le suivant arrive. Joueur ET bots
+/// peuvent les prendre.
 ///
-/// Effets (chaque PowerUpManager applique l'effet sur le SlimeController) :
-///  - Speed : le slime va 4x plus vite pendant 3 s
-///  - Aura  : une zone autour du slime éclate les bulles toutes seules (3 s)
-///  - Zap   : TOUS les autres slimes sont gelés 3 s (grand flash blanc)
+/// Designs (salim : « designe de voodoo net », tout en formes 3D posées à plat) :
+///  - ÉCLAIR jaune   → le slime va 4x plus vite pendant 3 s
+///  - CHAMPIGNON rouge style Mario → le slime devient GEANT x3 pendant 3 s
+///    (l'ancienne AURA qui éclatait les bulles a disparu)
+///  - FLOCON de neige → TOUS les autres slimes sont gelés 3 s (flash blanc)
 /// </summary>
 public class PowerUpManager : MonoBehaviour
 {
@@ -20,7 +22,7 @@ public class PowerUpManager : MonoBehaviour
 
     [Header("Règles (tout se règle ici)")]
     [Tooltip("Secondes entre deux power-ups")]
-    public float spawnInterval = 30f;
+    public float spawnInterval = 15f;
     [Tooltip("Secondes avant le TOUT PREMIER power-up du round")]
     public float firstSpawnDelay = 10f;
     [Tooltip("Hauteur de flottement du bonus au-dessus du sol")]
@@ -33,6 +35,11 @@ public class PowerUpManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+
+        // PIÈGE DE SÉRIALISATION : la scène MainScene enregistre l'ANCIENNE
+        // valeur (30) → elle écraserait le default du script. On remet 15 ICI,
+        // à l'exécution (même schéma que le botForce des bots / roundDuration).
+        if (spawnInterval != 15f) spawnInterval = 15f;   // salim : 1 power-up / 15 s
     }
 
     private void OnDestroy()
@@ -85,8 +92,8 @@ public class PowerUpManager : MonoBehaviour
         pickup = BuildPickup(kind, pos);
         CurrentPickup = pickup.transform;
 
-        string nom = kind == PowerUpType.Speed ? "VITESSE x4" :
-                     kind == PowerUpType.Aura  ? "AURA d'eclatement" : "ZAP d'etourdissement";
+        string nom = kind == PowerUpType.Speed ? "ECLAIR de vitesse" :
+                     kind == PowerUpType.Aura  ? "CHAMPIGNON geant x3" : "FLOCON de gel";
         Debug.Log("[POWER-UP] Apparu : " + nom);
     }
 
@@ -98,43 +105,147 @@ public class PowerUpManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Construit le bonus : sphère colorée + halo plat qui tourne.
+    /// Construit le bonus avec SON DESIGN (salim 03/10) :
+    ///   Speed → éclair jaune, Aura → champignon rouge style Mario, Zap → flocon.
+    /// Tout est construit en primitives de code (aucun asset du pack modifié).
     /// Collider en TRIGGER généreux : facile à attraper même en roulant vite.
     /// </summary>
     private GameObject BuildPickup(PowerUpType kind, Vector3 pos)
     {
-        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        go.name = "PowerUp_" + kind;
+        GameObject go = new GameObject("PowerUp_" + kind);
         go.transform.position = pos;
-        go.transform.localScale = Vector3.one * 0.55f;
 
-        SphereCollider col = go.GetComponent<SphereCollider>();
+        SphereCollider col = go.AddComponent<SphereCollider>();
         col.isTrigger = true;  // traverse : on le touche, il donne le bonus
-        col.radius = 2.2f;     // zone d'attrapage large (x l'épaisseur du slime)
+        col.radius = 1.5f;     // zone d'attrapage large (x l'épaisseur du slime)
 
         var pu = go.AddComponent<PowerUp>();
         pu.type = kind;
+
+        switch (kind)
+        {
+            case PowerUpType.Speed: BuildLightning(go); break;
+            case PowerUpType.Aura:  BuildMushroom(go);  break;
+            default:                BuildSnowflake(go); break;
+        }
 
         // Halo plat incliné : en tournant, on voit bien que c'est un bonus
         GameObject halo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         Destroy(halo.GetComponent<CapsuleCollider>()); // jamais de collision fantôme
         halo.name = "Halo";
         halo.transform.SetParent(go.transform, false);
-        halo.transform.localScale = new Vector3(2.6f, 0.03f, 2.6f);
+        halo.transform.localPosition = new Vector3(0f, -0.30f, 0f);
+        halo.transform.localScale = new Vector3(2.2f, 0.03f, 2.2f);
         halo.transform.localRotation = Quaternion.Euler(24f, 0f, 0f);
-        halo.GetComponent<MeshRenderer>().material = MakeColorMat(Color.white * 1.15f);
-
-        go.GetComponent<MeshRenderer>().material = MakeColorMat(ColorFor(kind));
+        halo.GetComponent<MeshRenderer>().material = MakeColorMat(ColorFor(kind));
         return go;
     }
 
+    // ────────────────────────────────────────────────────────────────
+    //  DESIGNS 3D (shapes posées à PIANI comme des jetons, "voodoo net")
+    // ────────────────────────────────────────────────────────────────
+
+    /// <summary>ÉCLAIR jaune : 2 pavés de biseau assemblés à plat en zig-zag.</summary>
+    private static void BuildLightning(GameObject go)
+    {
+        Material mat = MakeColorMat(new Color(1f, 0.82f, 0.15f)); // jaune
+        BoltSlab(go.transform, mat, new Vector2(0.30f, 0.92f), new Vector2(-0.30f, 0.12f), 0.32f);
+        BoltSlab(go.transform, mat, new Vector2(0.10f, 0.15f), new Vector2(-0.30f, -0.90f), 0.32f);
+    }
+
+    /// <summary>Un morceau de l'éclair : cube allongé orienté le long du segment.</summary>
+    private static void BoltSlab(Transform parent, Material mat,
+                                 Vector2 a, Vector2 b, float thickness)
+    {
+        GameObject slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Object.Destroy(slab.GetComponent<BoxCollider>()); // jamais de collision fantôme
+        slab.name = "BoltSlab";
+        Transform t = slab.transform;
+        t.SetParent(parent, false);
+
+        Vector2 dir = b - a;
+        Vector2 dirN = dir.normalized;
+        t.localPosition = new Vector3((a.x + b.x) * 0.5f, 0.20f, (a.y + b.y) * 0.5f);
+        // aligne l'axe Z local du cube sur le segment (tout à plat, lisible du dessus)
+        t.localRotation = Quaternion.FromToRotation(Vector3.forward, new Vector3(dirN.x, 0f, dirN.y));
+        t.localScale = new Vector3(thickness, 0.16f, dir.magnitude);
+        slab.GetComponent<MeshRenderer>().material = mat;
+    }
+
+    /// <summary>FLOCON de neige : 3 branches (6 pointes) + cœur blanc brillant.</summary>
+    private static void BuildSnowflake(GameObject go)
+    {
+        Material mat = MakeColorMat(new Color(0.55f, 0.86f, 1f)); // bleu glace
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject branche = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.Destroy(branche.GetComponent<BoxCollider>()); // jamais de collision fantôme
+            branche.name = "Flocon";
+            branche.transform.SetParent(go.transform, false);
+            branche.transform.localPosition = new Vector3(0f, 0.20f, 0f);
+            branche.transform.localRotation = Quaternion.Euler(0f, i * 60f, 0f);
+            branche.transform.localScale = new Vector3(0.14f, 0.16f, 1.5f);
+            branche.GetComponent<MeshRenderer>().material = mat;
+        }
+
+        // Cœur blanc au centre du flocon
+        GameObject coeur = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        Object.Destroy(coeur.GetComponent<SphereCollider>()); // jamais de collision fantôme
+        coeur.name = "Coeur";
+        coeur.transform.SetParent(go.transform, false);
+        coeur.transform.localPosition = new Vector3(0f, 0.20f, 0f);
+        coeur.transform.localScale = Vector3.one * 0.34f;
+        coeur.GetComponent<MeshRenderer>().material = MakeColorMat(Color.white);
+    }
+
+    /// <summary>CHAMPIGNON style Mario : chapeau rouge bombé + pois blancs + pied crème.</summary>
+    private static void BuildMushroom(GameObject go)
+    {
+        // Pied crème
+        GameObject pied = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        Object.Destroy(pied.GetComponent<CapsuleCollider>()); // jamais de collision fantôme
+        pied.name = "Pied";
+        pied.transform.SetParent(go.transform, false);
+        pied.transform.localPosition = new Vector3(0f, -0.10f, 0f);
+        pied.transform.localScale = new Vector3(0.42f, 0.28f, 0.42f);
+        pied.GetComponent<MeshRenderer>().material = MakeColorMat(new Color(1f, 0.93f, 0.80f));
+
+        // Chapeau rouge bombé (demi-sphère écrasée)
+        GameObject chapeau = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        Object.Destroy(chapeau.GetComponent<SphereCollider>()); // jamais de collision fantôme
+        chapeau.name = "Chapeau";
+        chapeau.transform.SetParent(go.transform, false);
+        chapeau.transform.localPosition = new Vector3(0f, 0.18f, 0f);
+        chapeau.transform.localScale = new Vector3(1.05f, 0.62f, 1.05f);
+        chapeau.GetComponent<MeshRenderer>().material = MakeColorMat(new Color(0.92f, 0.22f, 0.22f));
+
+        // Pois blancs posés sur le chapeau
+        Vector3[] pois =
+        {
+            new Vector3(-0.28f, 0.34f,  0.18f),
+            new Vector3( 0.26f, 0.34f, -0.16f),
+            new Vector3( 0.02f, 0.44f, -0.06f)
+        };
+        foreach (Vector3 p in pois)
+        {
+            GameObject poi = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Object.Destroy(poi.GetComponent<SphereCollider>()); // jamais de collision fantôme
+            poi.name = "Pois";
+            poi.transform.SetParent(go.transform, false);
+            poi.transform.localPosition = p;
+            poi.transform.localScale = Vector3.one * 0.22f;
+            poi.GetComponent<MeshRenderer>().material = MakeColorMat(Color.white);
+        }
+    }
+
+    /// <summary>Couleur d'identité : éclair = jaune, champignon = rouge, flocon = bleu glace.</summary>
     private static Color ColorFor(PowerUpType kind)
     {
         switch (kind)
         {
             case PowerUpType.Speed: return new Color(1f, 0.82f, 0.15f); // jaune
-            case PowerUpType.Aura:  return new Color(1f, 0.35f, 0.75f); // rose
-            default:                return new Color(0.15f, 0.85f, 1f); // cyan
+            case PowerUpType.Aura:  return new Color(0.92f, 0.22f, 0.22f); // rouge champignon
+            default:                return new Color(0.55f, 0.86f, 1f); // bleu glace
         }
     }
 
@@ -168,13 +279,16 @@ public class PowerUpManager : MonoBehaviour
                 break;
 
             case PowerUpType.Aura:
-                slime.ApplyAura(3f);
+                slime.ApplyGiant(3f); // champignon : GEANT x3 (salim 03/10)
                 break;
 
             case PowerUpType.Zap:
                 // Tous les AUTRES slimes sont gelés 3 s
                 foreach (var other in Object.FindObjectsByType<SlimeController>(FindObjectsSortMode.None))
-                    if (other != slime) other.ApplyStun(3f);
+                {
+                    if (other == slime) continue;
+                    other.ApplyStun(3f);
+                }
                 ZapFeedback();
                 break;
         }
