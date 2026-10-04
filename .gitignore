@@ -12,6 +12,14 @@ Builds/iOS/*
 !Builds/iOS/XcodeProject
 Builds/iOS/XcodeProject/build/
 
+# salim 04/10 : on garde aussi le projet Gradle Android exporté (pour
+# l'APK sur Codemagic, même principe que le projet Xcode iOS).
+!Builds/Android
+Builds/Android/*
+!Builds/Android/PopPocket
+Builds/Android/PopPocket/build/
+Builds/Android/PopPocket/.gradle/
+
 # macOS de Codemagic
 *.ipa
 Payload/

@@ -60,3 +60,34 @@ workflows:
 
     artifacts:
       - PopPocket.ipa
+
+  # ─────────────────────────────────────────────────────────────────
+  #  ANDROID (salim 04/10) : même principe que l'iOS — Unity (sur le PC)
+  #  exporte le projet Gradle dans Builds/Android/PopPocket, et Codemagic
+  #  n'a plus qu'à lancer gradle pour fabriquer l'APK (pas de licence
+  #  Unity nécessaire sur le Mac).
+  #  ▶ Dans Unity : Build Settings → Android → cocher "Export Project"
+  #    → Export → choisir Builds/Android/PopPocket
+  # ─────────────────────────────────────────────────────────────────
+  android-workflow:
+    name: PopPocket Android — APK
+    max_build_duration: 120
+    scripts:
+      - name: Telecharge les gros fichiers Git LFS
+        script: |
+          set -e
+          cd $CM_BUILD_DIR
+          git lfs pull
+          # Vérification : le projet Gradle exporté doit bien être là
+          test -f Builds/Android/PopPocket/gradlew
+
+      - name: Fabrique l'APK (signé debug → installable directement)
+        script: |
+          set -e
+          cd $CM_BUILD_DIR/Builds/Android/PopPocket
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+    artifacts:
+      # L'APK produit par gradle
+      - Builds/Android/PopPocket/build/outputs/apk/debug/*.apk

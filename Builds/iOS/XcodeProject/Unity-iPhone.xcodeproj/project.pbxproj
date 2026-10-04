@@ -206,6 +206,7 @@
 		05862F66315AF48E21A389CD /* DisplayManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DisplayManager.h; path = Classes/Unity/DisplayManager.h; sourceTree = SOURCE_ROOT; };
 		05DDA3FCDF632B6069EF328B /* UnityView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = UnityView.h; path = Classes/UI/UnityView.h; sourceTree = SOURCE_ROOT; };
 		05F2FCF5D8AF780A2BE2CF95 /* UnityAppController+ViewHandling.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = "UnityAppController+ViewHandling.mm"; path = "Classes/UI/UnityAppController+ViewHandling.mm"; sourceTree = SOURCE_ROOT; };
+		0625BA89AA0F71807DF4285A /* Assembly-CSharp__2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "Assembly-CSharp__2.cpp"; path = "Il2CppOutputProject/Source/il2cppOutput/Assembly-CSharp__2.cpp"; sourceTree = SOURCE_ROOT; };
 		06D2F6EE203E616EFFD31304 /* GenericMethods__11.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = GenericMethods__11.cpp; path = Il2CppOutputProject/Source/il2cppOutput/GenericMethods__11.cpp; sourceTree = SOURCE_ROOT; };
 		079F8E40811508DAC6408630 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		07F77C1BA780C0E1C591423E /* Unity.TextMeshPro__6.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Unity.TextMeshPro__6.cpp; path = Il2CppOutputProject/Source/il2cppOutput/Unity.TextMeshPro__6.cpp; sourceTree = SOURCE_ROOT; };
@@ -786,6 +787,7 @@
 				C40C9D5FB5363330524518CB /* Assembly-CSharp.cpp */,
 				359EA6DE6F0ADB889FC61B63 /* Assembly-CSharp_CodeGen.c */,
 				F828452E792C2569D9C775E5 /* Assembly-CSharp__1.cpp */,
+				0625BA89AA0F71807DF4285A /* Assembly-CSharp__2.cpp */,
 				DC641E85B09D087E3E294418 /* GenericMethods.cpp */,
 				CF08E8E4A81091C5FDB9F66D /* GenericMethods__1.cpp */,
 				CFD9F8BCEB8E8AB7DDA7F121 /* GenericMethods__10.cpp */,
