@@ -170,6 +170,70 @@ public static class VoodooStyle
         return kenneyBouton;
     }
 
+    // ── PACK KENNEY COMPLET (salim 04/10 : « prend UI de Kenney pour améliorer »)
+    // Le pack officiel kenney.nl/ui-pack (CC0) est copié dans
+    // Assets/Resources/KenneyUI : RondJaune / RondBleu / RondGris / RondRouge
+    // (boutons RONDS 64×64 avec le relief CUIT dedans), RectBleu (rectangle
+    // bleu 192×64, pour le bouton NIVEAUX) et Panneau (fond gris 192×64,
+    // pour la modale). Helper général : charge + cache + 9-slice.
+    private static readonly System.Collections.Generic.Dictionary<string, Sprite> kenneyCache
+        = new System.Collections.Generic.Dictionary<string, Sprite>();
+
+    public static Sprite SpriteKenney(string nom, Vector4 bordure)
+    {
+        Sprite s;
+        if (kenneyCache.TryGetValue(nom, out s) && s != null) return s;
+        var tex = Resources.Load<Texture2D>("KenneyUI/" + nom);
+        if (tex == null) return null;   // sprite absent du pack : l'appelant garde son fallback
+        s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
+            new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, bordure);
+        s.name = nom;
+        kenneyCache[nom] = s;
+        return s;
+    }
+
+    // ── MAPPING COULEUR → SPRITE KENNEY NATIF (salim 04/10 : « prend les
+    //    boutons avec relief ») ────────────────────────────────────────
+    // Les sprites colorés du pack ont leur couleur + relief DÉJÀ CUITS
+    // dedans (la face n'est PAS blanche) : les teinter ruine le relief.
+    // Donc pour chaque bouton on choisit le sprite natif de la bonne
+    // famille de couleur (jaune / orange / bleu / vert / rouge) et on le
+    // pose SANS TINTE (Image.color = blanc). L'orange n'existe pas dans
+    // le pack → RectOrange / RondOrange ont été CUIS depuis les jaunes
+    // (mêmes pixels, teinte changée). Renvoie null si la couleur n'est
+    // pas couverte (gris, etc.) : l'appelant garde BoutonGris + teinte.
+    public static Sprite SpritePuffyKenney(bool rond, Color c)
+    {
+        float max = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
+        float min = Mathf.Min(c.r, Mathf.Min(c.g, c.b));
+
+        // Gris (r≈g≈b) : pas de sprite natif gris rond assez sombre —
+        // on retourne null, l'appelant teintera BoutonGris (comme avant).
+        if (max - min < 0.12f) return null;
+
+        bool bleu  = (c.b >= c.r && c.b >= c.g);
+        bool vert  = (!bleu && c.g >= c.r && c.g >= c.b);
+        string racine;
+        if (bleu)       racine = "Bleu";
+        else if (vert)  racine = "Verte";
+        else if (c.g >= 0.45f) racine = (c.g >= 0.65f) ? "Jaune" : "Orange";
+        else            racine = "Rouge";   // rouge doux ET orange très sombre
+
+        return SpriteKenney((rond ? "Rond" : "Rect") + racine,
+            rond ? new Vector4(14f, 14f, 18f, 14f) : new Vector4(20f, 20f, 20f, 20f));
+    }
+
+    /// <summary>Un bouton à peu près carré → sprite ROND du pack ; sinon RECT.</summary>
+    private static bool EstRond(RectTransform rt)
+    {
+        if (rt == null) return false;
+        float w = Mathf.Abs(rt.rect.width);
+        float h = Mathf.Abs(rt.rect.height);
+        if (w < 1f || h < 1f) return false;
+        float ratio = w / h;
+        return ratio < 1.35f && ratio > 0.74f;
+    }
+
     // ── BOUTON PUFFY 3D (salim 03/10 : « bouton menu plus effet 3d ») ─
     /// <summary>
     /// BOUTON À BLOC de jouet. Avec le sprite Kenney en Resources, ON NE
@@ -201,9 +265,22 @@ public static class VoodooStyle
             var img0 = btn.GetComponent<Image>();
             if (img0 != null)
             {
-                img0.sprite = kenney;
+                // salim 04/10 : sprite NATIF de la bonne couleur + forme
+                // (rond si bouton ~carré, rect sinon), posé SANS teinte —
+                // le relief et le gloss sont déjà dessinés dedans. Gris et
+                // couleurs non couvertes : BoutonGris teinté (comme avant).
+                Sprite natif = SpritePuffyKenney(EstRond(rt), color);
+                if (natif != null)
+                {
+                    img0.sprite = natif;
+                    img0.color = Color.white;
+                }
+                else
+                {
+                    img0.sprite = kenney;
+                    img0.color = color;
+                }
                 img0.type = Image.Type.Sliced;
-                img0.color = color;
             }
 
             // sécurité : si du code-ancien avait déjà posé les couches

@@ -119,7 +119,10 @@ public class StartMenu : MonoBehaviour
         RectTransform brt = btnGO.GetComponent<RectTransform>();
         brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
         brt.pivot = new Vector2(0.5f, 0.5f);
-        brt.sizeDelta = new Vector2(520, 180);
+        // NIVEAUX (salim 04/10) : bouton PLUS PETIT (520×180 → 420×130),
+        // MÊME position (Pos -390) — la place libérée accueille la rangée
+        // des niveaux juste en dessous.
+        brt.sizeDelta = new Vector2(420f * kY, 130f * kY);
         brt.anchoredPosition = Pos(-390);   // salim 04/10 : JOUER + BOUTIQUE + règles descendus ENSEMBLE (-100) pour ne pas se chevaucher
 
         Button btn = btnGO.GetComponent<Button>();
@@ -129,7 +132,7 @@ public class StartMenu : MonoBehaviour
         // salim 04/10 : « il y a un carré à côté de jouer » — le ▶
         // n'existe pas dans Bebas Neue, TMP le dessinait en CARRÉ. Fini :
         // juste le mot, et le bouton Kenney parle tout seul.
-        TMP_Text label = MakeText(btnGO.transform, "Label", Trad.T("JOUER", "PLAY"), 84,
+        TMP_Text label = MakeText(btnGO.transform, "Label", Trad.T("JOUER", "PLAY"), (int)(66 * kY),
             VoodooStyle.Blanc, Vector2.zero);
         VoodooStyle.ApplyText(label, VoodooStyle.Blanc);
         VoodooStyle.MakePuffy(btnGO, VoodooStyle.Jaune);
@@ -163,15 +166,46 @@ public class StartMenu : MonoBehaviour
         RectTransform srt = shopGO.GetComponent<RectTransform>();
         srt.anchorMin = srt.anchorMax = new Vector2(0.5f, 0.5f);
         srt.pivot = new Vector2(0.5f, 0.5f);
-        srt.sizeDelta = new Vector2(460, 140);
+        // NIVEAUX (salim 04/10) : boutique PLUS PETITE (460×140 → 360×105),
+        // MÊME position (Pos -590).
+        srt.sizeDelta = new Vector2(360f * kY, 105f * kY);
         srt.anchoredPosition = Pos(-590);   // salim 04/10 : descendu avec JOUER (-100)
 
         shopGO.GetComponent<Button>().onClick.AddListener(OnShopClicked);
 
-        TMP_Text shopLabel = MakeText(shopGO.transform, "Label", Trad.T("BOUTIQUE", "SHOP"), 60,
+        TMP_Text shopLabel = MakeText(shopGO.transform, "Label", Trad.T("BOUTIQUE", "SHOP"), 46,
             VoodooStyle.Blanc, Vector2.zero);
         VoodooStyle.ApplyText(shopLabel, VoodooStyle.Blanc);
         VoodooStyle.MakePuffy(shopGO, VoodooStyle.Orange);
+
+        // ---- BOUTON NIVEAUX (salim 04/10 : « je préfère une modale ») ----
+        // Un 3e bouton ENTRE JOUER et BOUTIQUE (Pos -497) qui OUVRE la
+        // modale de sélection des niveaux.
+        GameObject lvlGO = new GameObject("LevelsButton",
+            typeof(Image), typeof(Button));
+        lvlGO.transform.SetParent(go.transform, false);
+        RectTransform lrt = lvlGO.GetComponent<RectTransform>();
+        lrt.anchorMin = lrt.anchorMax = new Vector2(0.5f, 0.5f);
+        lrt.pivot = new Vector2(0.5f, 0.5f);
+        lrt.sizeDelta = new Vector2(300f * kY, 90f * kY);
+        lrt.anchoredPosition = Pos(-497);            // entre JOUER (-390) et BOUTIQUE (-590)
+
+        lvlGO.GetComponent<Button>().onClick.AddListener(OuvrirModaleNiveaux);
+
+        TMP_Text lvlLabel = MakeText(lvlGO.transform, "Label", Trad.T("NIVEAUX", "LEVELS"),
+            (int)(40 * kY), VoodooStyle.Blanc, Vector2.zero);
+        VoodooStyle.ApplyText(lvlLabel, VoodooStyle.Blanc);
+        // KENNEY (salim 04/10) : vrai rect BLEU du pack (relief cuit),
+        // pas le gris teinté — le bleu garde toute sa profondeur.
+        VoodooStyle.MakePuffy(lvlGO, VoodooStyle.BleuNuit);
+        Sprite rectBleu = VoodooStyle.SpriteKenney("RectBleu", new Vector4(20f, 20f, 20f, 20f));
+        if (rectBleu != null)
+        {
+            Image li = lvlGO.GetComponent<Image>();
+            li.sprite = rectBleu;
+            li.type = Image.Type.Sliced;
+            li.color = Color.white;
+        }
 
         // ---- AIDE en bas ----
         TMP_Text help = MakeText(go.transform, "HelpText",
@@ -183,6 +217,184 @@ public class StartMenu : MonoBehaviour
         help.color = new Color(1f, 1f, 1f, 0.9f);
 
         Debug.Log("[MENU-START] Menu construit ✔");
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  NIVEAUX (salim 04/10 : « je préfère une modale qui s'ouvre ») :
+    //  le 3e bouton du menu (NIVEAUX, entre JOUER et BOUTIQUE) ouvre
+    //  une fenêtre par-dessus TOUT, fond assombri, panneau central avec
+    //  des boutons ronds de niveau. Débloqué = numéro (jaune si choisi,
+    //  bleu sinon) ; verrouillé = "?" gris. On ferme avec le X ou en
+    //  tapant le fond sombre.
+    // ────────────────────────────────────────────────────────────────
+    private void OuvrirModaleNiveaux()
+    {
+        // kT recalculé ICI (kY/Pos sont LOCALS à BuildUI ; la modale est
+        // reconstruite à chaque ouverture, donc suit l'orientation)
+        float kT = Screen.width > Screen.height ? 0.6f : 1f;
+
+        // Une seule modale à la fois
+        GameObject ancienne = GameObject.Find("ModaleNiveaux");
+        if (ancienne != null) Destroy(ancienne);
+
+        // ---- VOILE plein écran : assombrit + CAPTURE les clics (bloque le menu derrière) ----
+        // Pas besoin de trier les canvas : la BOUTIQUE (sort 10100) ne peut
+        // pas s'ouvrir pendant la modale (son bouton est bloqué par le voile).
+        GameObject voile = new GameObject("ModaleNiveaux",
+            typeof(RectTransform), typeof(Image), typeof(Button));
+        if (canvas != null) voile.transform.SetParent(canvas.transform, false);
+        RectTransform vt = voile.GetComponent<RectTransform>();
+        vt.anchorMin = Vector2.zero;
+        vt.anchorMax = Vector2.one;
+        vt.offsetMin = Vector2.zero;
+        vt.offsetMax = Vector2.zero;
+        Image vi = voile.GetComponent<Image>();
+        vi.color = new Color(0f, 0f, 0f, 0.65f);
+        voile.GetComponent<Button>().onClick.AddListener(FermerModaleNiveaux);   // tap sur le fond = fermer
+
+        // ---- PANNEAU central (puffy : même style que les boutons) ----
+        GameObject panneau = new GameObject("Panneau", typeof(Image), typeof(Button));
+        panneau.transform.SetParent(voile.transform, false);
+        RectTransform prt = panneau.GetComponent<RectTransform>();
+        prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
+        prt.pivot = new Vector2(0.5f, 0.5f);
+        prt.sizeDelta = new Vector2(720f * kT, 760f * kT);   // 10 niveaux : panneau plus haut
+        // Bouton sur le panneau pour "manger" le clic (sinon le voile ferme)
+        Button pb = panneau.GetComponent<Button>();
+        pb.onClick.AddListener(() => { });   // clic absorbé, rien ne se passe
+
+        // KENNEY (salim 04/10) : vrai fond de panneau du pack, 9-slice.
+        Sprite spPanneau = VoodooStyle.SpriteKenney("Panneau", new Vector4(24f, 24f, 24f, 26f));
+        if (spPanneau != null)
+        {
+            Image pi = panneau.GetComponent<Image>();
+            pi.sprite = spPanneau;
+            pi.type = Image.Type.Sliced;
+            pi.color = Color.white;
+        }
+
+        // ---- TITRE ----
+        TMP_Text titre = MakeText(panneau.transform, "Titre", Trad.T("CHOISIS TON NIVEAU", "CHOOSE YOUR LEVEL"),
+            (int)(56 * kT), VoodooStyle.Blanc, new Vector2(0f, 300f * kT));
+        VoodooStyle.ApplyText(titre, VoodooStyle.Jaune);
+
+        // ---- GRILLE DES NIVEAUX : 2 colonnes × 5 rangées = 10 (salim 04/10) ----
+        int maxNiveau = ProgresseurJeu.Niveau;
+        int choisi = ProgresseurJeu.Choisi;
+        int debut = 1;                                    // TOUS les niveaux, du 1 au 10
+        float taille = 88f * kT, pasY = 98f * kT, pasX = 140f * kT;
+
+        for (int i = 0; i < ProgresseurJeu.NiveauMax; i++)
+        {
+            int niveau = debut + i;
+            bool debloque = niveau <= maxNiveau;
+            int col = i % 2, row = i / 2;                 // 0..4 en haut vers le bas
+
+            GameObject b = new GameObject("Niveau" + niveau, typeof(Image), typeof(Button));
+            b.transform.SetParent(panneau.transform, false);
+            RectTransform bt = b.GetComponent<RectTransform>();
+            bt.anchorMin = bt.anchorMax = new Vector2(0.5f, 0.5f);
+            bt.pivot = new Vector2(0.5f, 0.5f);
+            bt.sizeDelta = new Vector2(taille, taille);
+            // 5 rangées serrées mais SÉPARÉES : pas 98 > taille 88, jamais
+            // de chevauchement (même leçon que les 2 rangées d'avant).
+            bt.anchoredPosition = new Vector2((col == 0 ? -1f : 1f) * pasX, ((2 - row) * pasY));
+
+            TMP_Text lbl = MakeText(b.transform, "Label",
+                debloque ? niveau.ToString() : "?", (int)(52 * kT),
+                VoodooStyle.Blanc, Vector2.zero);
+            VoodooStyle.ApplyText(lbl, VoodooStyle.Blanc);
+
+            Button btn = b.GetComponent<Button>();
+            if (debloque)
+            {
+                VoodooStyle.MakePuffy(b, niveau == choisi
+                    ? VoodooStyle.Jaune : VoodooStyle.BleuNuit);
+                // KENNEY (salim 04/10) : boutons RONDS du pack avec le
+                // relief cuit dedans (jaune = choisi, bleu = les autres).
+                Sprite rond = VoodooStyle.SpriteKenney(
+                    niveau == choisi ? "RondJaune" : "RondBleu",
+                    new Vector4(14f, 14f, 18f, 14f));
+                if (rond != null)
+                {
+                    Image bi = b.GetComponent<Image>();
+                    bi.sprite = rond;
+                    bi.type = Image.Type.Sliced;
+                    bi.color = Color.white;
+                }
+                int copie = niveau;                       // capture pour la lambda
+                btn.onClick.AddListener(() =>
+                {
+                    ProgresseurJeu.Choisi = copie;
+                    Debug.Log("[NIVEAU] Joueur choisit le niveau " + copie);
+                    FermerModaleNiveaux();                // choix fait : la modale part
+                });
+            }
+            else
+            {
+                VoodooStyle.MakePuffy(b, new Color(0.25f, 0.25f, 0.28f));
+                // KENNEY : rond GRIS du pack pour le "?" verrouillé.
+                Sprite rondGris = VoodooStyle.SpriteKenney("RondGris",
+                    new Vector4(14f, 14f, 18f, 14f));
+                if (rondGris != null)
+                {
+                    Image bi = b.GetComponent<Image>();
+                    bi.sprite = rondGris;
+                    bi.type = Image.Type.Sliced;
+                    bi.color = Color.white;
+                }
+                btn.interactable = false;                 // "?" = verrouillé
+            }
+        }
+
+        // ---- BOUTON X (fermer) ----
+        GameObject xGO = new GameObject("FermerButton", typeof(Image), typeof(Button));
+        xGO.transform.SetParent(panneau.transform, false);
+        RectTransform xt = xGO.GetComponent<RectTransform>();
+        xt.anchorMin = xt.anchorMax = new Vector2(1f, 1f);   // coin haut-droit du panneau
+        xt.pivot = new Vector2(1f, 1f);
+        xt.sizeDelta = new Vector2(70f * kT, 70f * kT);
+        xt.anchoredPosition = new Vector2(10f * kT, -10f * kT);
+        TMP_Text xl = MakeText(xGO.transform, "Label", "X", (int)(44 * kT),
+            VoodooStyle.Blanc, Vector2.zero);
+        VoodooStyle.ApplyText(xl, VoodooStyle.Blanc);
+        VoodooStyle.MakePuffy(xGO, VoodooStyle.Orange);
+        // KENNEY (salim 04/10) : le X devient un rond ROUGE du pack.
+        Sprite rondRouge = VoodooStyle.SpriteKenney("RondRouge", new Vector4(14f, 14f, 18f, 14f));
+        if (rondRouge != null)
+        {
+            Image xi = xGO.GetComponent<Image>();
+            xi.sprite = rondRouge;
+            xi.type = Image.Type.Sliced;
+            xi.color = Color.white;
+        }
+        xGO.GetComponent<Button>().onClick.AddListener(FermerModaleNiveaux);
+
+        // ---- BOUTON JOUER au bas de la modale ----
+        GameObject jouerGO = new GameObject("JouerDepuisModale", typeof(Image), typeof(Button));
+        jouerGO.transform.SetParent(panneau.transform, false);
+        RectTransform jt = jouerGO.GetComponent<RectTransform>();
+        jt.anchorMin = jt.anchorMax = new Vector2(0.5f, 0.5f);
+        jt.pivot = new Vector2(0.5f, 0.5f);
+        jt.sizeDelta = new Vector2(360f * kT, 95f * kT);
+        jt.anchoredPosition = new Vector2(0f, -320f * kT);   // sous la grille de 10
+        TMP_Text jl = MakeText(jouerGO.transform, "Label", Trad.T("JOUER", "PLAY"),
+            (int)(46 * kT), VoodooStyle.Blanc, Vector2.zero);
+        VoodooStyle.ApplyText(jl, VoodooStyle.Blanc);
+        VoodooStyle.MakePuffy(jouerGO, VoodooStyle.Jaune);
+        jouerGO.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            FermerModaleNiveaux();
+            OnPlayClicked();
+        });
+
+        Debug.Log("[MENU-START] Modale NIVEAUX ouverte");
+    }
+
+    private void FermerModaleNiveaux()
+    {
+        GameObject m = GameObject.Find("ModaleNiveaux");
+        if (m != null) Destroy(m);
     }
 
     /// <summary>

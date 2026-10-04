@@ -49,6 +49,25 @@ public class Bubble : MonoBehaviour
         baseScale = transform.localScale;   // l'échelle posée par le spawner
     }
 
+    /// <summary>
+    /// FLUIDITÉ (salim 05/10) : le tapis est RÉUTILISÉ d'un round à l'autre.
+    /// Au nouveau round, chaque bulle encore vivante repart à neuf au lieu
+    /// d'être détruite puis re-créée (400 Destroy + 400 CreatePrimitive =
+    /// gros pic de GC = l'image accroche au début de chaque partie).
+    /// </summary>
+    public void RemiseAZero()
+    {
+        StopAllCoroutines();             // un squish en cours ne doit pas reprendre
+        popped = false;
+        squashing = false;
+    }
+
+    /// <summary>Le spawner a (re)donné une taille à la bulle → la re-mémorise comme taille de repos.</summary>
+    public void PoseEchelleDeBase()
+    {
+        baseScale = transform.localScale;
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (popped || squashing) return;

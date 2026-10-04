@@ -160,6 +160,20 @@ public class SlimeAnimDriver : MonoBehaviour
     // Créée UNE fois (statique) au runtime, réglée comme celle de la démo.
     private static bool probeCreee;
 
+    // FIX IPHONE (salim 04/10) : slimes NOIRS au 1er lancement puis normaux
+    // après un Rejouer. La vraie cause : la ReflectionProbe, créée une seule
+    // fois par lancement, capturait un environnement pas encore prêt (sol
+    // d'eau, décor) → les slimes réfractaient du NOIR. Au Rejouer la probe
+    // n'était PAS recréée (le statique restait vrai) → pas de reflets →
+    // slimes normaux mais ternes. On remet le drapeau à zéro à CHAQUE
+    // chargement de scène : la probe est refaite proprement à chaque partie,
+    // une fois que le décor est en place.
+    static SlimeAnimDriver()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded
+            += (scene, mode) => { probeCreee = false; };
+    }
+
     /// <summary>
     /// Remet le matériau gelée OFFICIEL du pack (shader « Symphonie/Slime »)
     /// sur le slot corps de chaque renderer du blob — mais SEULEMENT si ce
@@ -271,23 +285,27 @@ public class SlimeAnimDriver : MonoBehaviour
         probe.boxProjection = true;
         probe.hdr = true;          // « HDR » renommé en minuscule (Unity 6)
         probe.importance = 1;      // idem (Unity 6)
-        probe.RenderProbe();   // capture MAINTENANT (l'environnement du démarrage)
-
-        // Une 2e capture 1 s plus tard : bulles et décor sont posés.
-        // (le coroutine runner doit être sur une instance → on en passe un
-        // dummy attaché à la probe elle-même)
+        // FIX IPHONE 04/10 : on ne capture PLUS tout de suite. Juste après la
+        // création, RenderProbe() sur le téléphone renvoyait un cubemap NOIR
+        // (frame pas prête sur Metal) → les slimes réfractaient du noir et
+        // restaient sombres. Les captures se font maintenant un peu après :
+        //  1re à ~0,4 s (décor posé) — d'ici là le shader utilise l'ambiance
+        //  par défaut (le même rendu qu'avant le Rejouer, donc correct),
+        //  2e à ~1,2 s (bulles + bulles d'eau posées).
         RafraichirPlusTard runner = go.AddComponent<RafraichirPlusTard>();
         runner.Lancer();
     }
 
-    /// <summary>Porteur de la coroutine de refresh différé de la probe.</summary>
+    /// <summary>Porteur des captures différées de la probe.</summary>
     private sealed class RafraichirPlusTard : MonoBehaviour
     {
         public void Lancer() { StartCoroutine(RafraichirCoro()); }
         private System.Collections.IEnumerator RafraichirCoro()
         {
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(0.4f);
             ReflectionProbe probe = GetComponent<ReflectionProbe>();
+            if (probe != null) probe.RenderProbe();
+            yield return new WaitForSeconds(0.8f);
             if (probe != null) probe.RenderProbe();   // décor + bulles posés → capture propre
         }
     }
@@ -327,6 +345,12 @@ public class SlimeAnimDriver : MonoBehaviour
         StartCoroutine(AutoFit());
     }
 
+    // CLEAN FPS (salim 05/10) : les paramètres de l'animator sont cherchés
+    // par UN ID NUMÉRIQUE (hash calculé une fois en mémoire) au lieu d'une
+    // recherche par TEXTE à chaque image, sur chaque slime.
+    private static readonly int hashZSpeed = Animator.StringToHash("ZSpeed");
+    private static readonly int hashXSpeed = Animator.StringToHash("XSpeed");
+
     private void Update()
     {
         if (visuel == null) return;
@@ -346,10 +370,10 @@ public class SlimeAnimDriver : MonoBehaviour
                                    Mathf.Max(0.01f, vitesseCourse - vitesseMarche));
 
         // Lissage du démo du pack : accélère vite (0,2 s), freine doucement (0,5 s)
-        float courant = animateur.GetFloat("ZSpeed");
+        float courant = animateur.GetFloat(hashZSpeed);
         float amorti = courant > z ? 0.5f : 0.2f;
-        animateur.SetFloat("ZSpeed", z, amorti, Time.deltaTime);
-        animateur.SetFloat("XSpeed", 0f); // locomotion "avant" : on oriente le blob
+        animateur.SetFloat(hashZSpeed, z, amorti, Time.deltaTime);
+        animateur.SetFloat(hashXSpeed, 0f); // locomotion "avant" : on oriente le blob
 
         // ---- Rotation du visuel vers la direction du mouvement ----
         if (vitesse > 0.4f && visuel != null)

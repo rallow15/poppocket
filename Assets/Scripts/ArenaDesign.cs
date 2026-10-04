@@ -26,7 +26,23 @@ public static class ArenaDesign
     /// <summary>Material de l'ombre SOFT sous les bulles (demandé par le spawner).</summary>
     private static Material matOmbre;
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    // ────────────────────────────────────────────────────────────────
+    // FIX IPHONE (salim 04/10) : RuntimeInitializeOnLoadMethod(AfterSceneLoad)
+    // ne tourne qu'UNE fois par lancement de l'app. Au Rejouer (LoadScene),
+    // le reload détruisait notre décor (horizon, brume, arbres reculés)
+    // et rien ne le refaisait. On se branche maintenant sur le chargement
+    // de CHAQUE scène → l'arène est redessinée à chaque partie.
+    // ────────────────────────────────────────────────────────────────
+    static ArenaDesign()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += (scene, mode) => Appliquer();
+    }
+
+    // Ce hook oblige Unity à toucher la classe AVANT le chargement de la
+    // première scène → l'abonnement au-dessus est posé à temps.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void ForcerInit() { }   // le static ctor fait le travail
+
     private static void Appliquer()
     {
         GameObject sol = GameObject.Find("Arena");

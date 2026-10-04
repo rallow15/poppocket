@@ -34,6 +34,11 @@ GraphicsSettings:
   - {fileID: 10753, guid: 0000000000000000f000000000000000, type: 0}
   - {fileID: 10770, guid: 0000000000000000f000000000000000, type: 0}
   - {fileID: 10783, guid: 0000000000000000f000000000000000, type: 0}
+  # salim 04/10 FIX IPHONE : le shader Standard est utilisé en code
+  # (Shader.Find("Standard") dans ArenaDesign / BubbleSpawner / PowerUpManager).
+  # Sans cette ligne, Unity pouvait le retirer du build iOS → Shader.Find
+  # renvoit null sur le téléphone → murs / collines / horizon cassés.
+  - {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}   # Standard
   m_PreloadedShaders: []
   m_PreloadShadersBatchTimeLimit: -1
   m_SpritesDefaultMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}

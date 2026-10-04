@@ -450,6 +450,10 @@ void RegisterAllStrippedInternalCalls()
 		void Register_UnityEngine_Animator_StringToHash_Injected();
 		Register_UnityEngine_Animator_StringToHash_Injected();
 
+		//System.Single UnityEngine.Animator::GetFloatID_Injected(System.IntPtr,System.Int32)
+		void Register_UnityEngine_Animator_GetFloatID_Injected();
+		Register_UnityEngine_Animator_GetFloatID_Injected();
+
 		//System.Single UnityEngine.Animator::GetFloatString_Injected(System.IntPtr,UnityEngine.Bindings.ManagedSpanWrapper&)
 		void Register_UnityEngine_Animator_GetFloatString_Injected();
 		Register_UnityEngine_Animator_GetFloatString_Injected();
@@ -465,6 +469,14 @@ void RegisterAllStrippedInternalCalls()
 		//System.Void UnityEngine.Animator::ResetTriggerString_Injected(System.IntPtr,UnityEngine.Bindings.ManagedSpanWrapper&)
 		void Register_UnityEngine_Animator_ResetTriggerString_Injected();
 		Register_UnityEngine_Animator_ResetTriggerString_Injected();
+
+		//System.Void UnityEngine.Animator::SetFloatIDDamp_Injected(System.IntPtr,System.Int32,System.Single,System.Single,System.Single)
+		void Register_UnityEngine_Animator_SetFloatIDDamp_Injected();
+		Register_UnityEngine_Animator_SetFloatIDDamp_Injected();
+
+		//System.Void UnityEngine.Animator::SetFloatID_Injected(System.IntPtr,System.Int32,System.Single)
+		void Register_UnityEngine_Animator_SetFloatID_Injected();
+		Register_UnityEngine_Animator_SetFloatID_Injected();
 
 		//System.Void UnityEngine.Animator::SetFloatStringDamp_Injected(System.IntPtr,UnityEngine.Bindings.ManagedSpanWrapper&,System.Single,System.Single,System.Single)
 		void Register_UnityEngine_Animator_SetFloatStringDamp_Injected();
@@ -2754,10 +2766,6 @@ void RegisterAllStrippedInternalCalls()
 		void Register_UnityEngine_Physics_get_gravity_Injected();
 		Register_UnityEngine_Physics_get_gravity_Injected();
 
-		//UnityEngine.Collider[] UnityEngine.Physics::OverlapSphere_Internal_Injected(UnityEngine.PhysicsScene&,UnityEngine.Vector3&,System.Single,System.Int32,UnityEngine.QueryTriggerInteraction)
-		void Register_UnityEngine_Physics_OverlapSphere_Internal_Injected();
-		Register_UnityEngine_Physics_OverlapSphere_Internal_Injected();
-
 	//End Registrations for type : UnityEngine.Physics
 
 	//Start Registrations for type : UnityEngine.PhysicsScene
@@ -2777,6 +2785,10 @@ void RegisterAllStrippedInternalCalls()
 		//System.Int32 UnityEngine.PhysicsScene::Internal_RaycastNonAlloc_Injected(UnityEngine.PhysicsScene&,UnityEngine.Ray&,UnityEngine.Bindings.ManagedSpanWrapper&,System.Single,System.Int32,UnityEngine.QueryTriggerInteraction)
 		void Register_UnityEngine_PhysicsScene_Internal_RaycastNonAlloc_Injected();
 		Register_UnityEngine_PhysicsScene_Internal_RaycastNonAlloc_Injected();
+
+		//System.Int32 UnityEngine.PhysicsScene::OverlapSphereNonAlloc_Internal_Injected(UnityEngine.PhysicsScene&,UnityEngine.Vector3&,System.Single,UnityEngine.Collider[],System.Int32,UnityEngine.QueryTriggerInteraction)
+		void Register_UnityEngine_PhysicsScene_OverlapSphereNonAlloc_Internal_Injected();
+		Register_UnityEngine_PhysicsScene_OverlapSphereNonAlloc_Internal_Injected();
 
 	//End Registrations for type : UnityEngine.PhysicsScene
 

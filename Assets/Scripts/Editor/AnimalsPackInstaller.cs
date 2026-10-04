@@ -44,7 +44,11 @@ public static class AnimalsPackInstaller
             // partagée entre modèles = glissade sans bouger les pattes).
             bool fixedMats = UrpMaterialConverter.Convert(existing);
             bool fixedWalk = FixWalkAnimations(existing);
-            if (fixedMats || fixedWalk)
+            // salim 04/10 : répare AUSSI tailles naturelles + anneau hors
+            // des coins de l'arène pour les animaux ALREADY posés.
+            bool fixedTailles = RenatureTailles(existing);
+            bool fixedAnneau = RecaleAnneau(existing);
+            if (fixedMats || fixedWalk || fixedTailles || fixedAnneau)
             {
                 EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
                 EditorSceneManager.SaveOpenScenes();
@@ -57,6 +61,17 @@ public static class AnimalsPackInstaller
         List<GameObject> models = FindAnimalModels();
         if (models.Count == 0)
         {
+            // FIX (salim 04/10, « ca a pas trop chanfer ») : même SANS le
+            // pack importé, on répare quandmême l'anneau des animaux
+            // présents (cubes de secours compris) — sinon le return plus
+            // haut laissait les cubes courir par-dessus les coins de l'arène.
+            bool fixAnneauSecours = existing != null && RecaleAnneau(existing);
+            if (fixAnneauSecours)
+            {
+                EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+                EditorSceneManager.SaveOpenScenes();
+                Debug.Log("[ANIMAUX-PACK] Anneau des animaux-cubes repoussé hors des coins ✔");
+            }
             Debug.Log(
                 "[ANIMAUX-PACK] Le pack « Animals FREE » n'est pas encore importé. " +
                 "Dans Unity : Window > Package Manager > My Assets > Animals FREE > " +
@@ -71,6 +86,13 @@ public static class AnimalsPackInstaller
         }
 
         float half = GameUpgradeInstaller.ArenaHalfForDecor();
+        // FIX ARÈNE (salim 04/10) : l'arène est un CARRÉ — ses COINS sont
+        // plus loin que le demi-côté (14 → coin à 19,8 m). L'ancien anneau
+        // (16-22 m) passait PAR-DANS les coins. On place tout au-delà de la
+        // diagonale + une petite marge : impossible de toucher l'arène.
+        float coin = half * 1.4142f;
+        float rMin = coin + 1.2f;      // ~21 m
+        float rMax = rMin + 4f;        // ~25 m
         var root = new GameObject("Animaux");
 
         // ── 3. Trouve LE clip de marche de CHAQUE animal ─────────────
@@ -99,20 +121,28 @@ public static class AnimalsPackInstaller
 
             // Position sur l'anneau, hors de l'arène
             float a = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            float r = Random.Range(half + 2.8f, half + 7.5f);
+            float r = Random.Range(rMin, rMax);   // au-delà des COINS du carré
             animal.transform.position = new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r);
             animal.transform.rotation = Quaternion.identity;
 
-            // Mise à l'échelle automatique : chaque modèle ≈ 1,1 m de haut
+            // TAILLES NATURELLES (salim 04/10 : « les animaux sont pas à la
+            // taille normale, genre ils ont tout la même taille ») : l'ancien
+            // réglage mettait CHAQUE modèle à 1,1 m de haut → la poule taille
+            // du cheval ! Maintenant chaque modèle est normalisé à 1,1 m
+            // PUIS multiplié par la vraie taille relative de SON espèce
+            // (cheval grandit, poule rétrécit…). Même si un modèle importe à
+            // une échelle absurde, la normalisation 1,1 m sert de garde-fou,
+            // et le facteur d'espèce est borné dans TailleEspece().
             float height = BoundsHeight(animal);
             if (height > 0.01f)
             {
-                float k = 1.1f / height;
+                float k = (1.1f / height) * TailleEspece(animal.name);
                 animal.transform.localScale *= k;
             }
             else
             {
-                animal.transform.localScale = new Vector3(1.1f, 1.1f, 1.1f);
+                float f = TailleEspece(animal.name);
+                animal.transform.localScale = new Vector3(1.1f * f, 1.1f * f, 1.1f * f);
             }
 
             // Décor pur : aucun collider (jamais en travers d'un slime)
@@ -142,7 +172,7 @@ public static class AnimalsPackInstaller
 
             // Balade : reste TOUJOURS sur l'anneau autour de l'arène
             var wanderer = animal.AddComponent<Wanderer>();
-            wanderer.ringRadius = new Vector2(half + 2.3f, half + 8.0f);
+            wanderer.ringRadius = new Vector2(rMin, rMax);
             wanderer.speed = Random.Range(0.8f, 1.6f);
             wanderer.bobAmplitude = 0.02f;
 
@@ -152,7 +182,112 @@ public static class AnimalsPackInstaller
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         EditorSceneManager.SaveOpenScenes();
         Debug.Log("[ANIMAUX-PACK] " + count + " vrais animaux animés installés " +
-                  "(tigre, cheval, chien, cerf, chat, pingouin, poule) — ils contournent l'arène ✔ 🦌🐧");
+                  "(tailles naturelles : cheval grand, poule petite) — ils contournent l'arène ✔ 🦌🐧");
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  TAILLES NATURELLES PAR ESPÈCE (salim 04/10)
+    // ────────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Facteur de taille RELATIF de l'espèce, autour d'une base de 1,1 m
+    /// (réglé à la main pour ressembler à la vraie nature, en mini low poly).
+    /// Le nom du modèle contient le nom de l'animal (Animal_Cheval, etc.).
+    /// </summary>
+    private static float TailleEspece(string nomModele)
+    {
+        string n = nomModele.ToLower();
+        if (n.Contains("cheval") || n.Contains("horse")) return 2.0f;  // ~2,2 m
+        if (n.Contains("cerf")   || n.Contains("deer"))  return 1.7f;  // ~1,9 m
+        if (n.Contains("tigre")  || n.Contains("tiger") ||
+            n.Contains("lion")   || n.Contains("ours")  ||
+            n.Contains("bear")   || n.Contains("eleph"))    return 1.5f;  // ~1,65 m
+        if (n.Contains("vache")  || n.Contains("cow")   ||
+            n.Contains("girafe") || n.Contains("giraf") ||
+            n.Contains("chame")  || n.Contains("camel"))    return 1.3f;
+        if (n.Contains("chien")  || n.Contains("dog")   ||
+            n.Contains("cochon") || n.Contains("pig")   ||
+            n.Contains("mouff")  || n.Contains("moufl") ||
+            n.Contains("croco")  || n.Contains("crocod"))   return 1.0f;  // ~1,1 m
+        if (n.Contains("renard") || n.Contains("fox")  ||
+            n.Contains("pingou") || n.Contains("pengui") ||
+            n.Contains("penguin")|| n.Contains("loup")  ||
+            n.Contains("wolf")   || n.Contains("mouton") ||
+            n.Contains("sheep")  || n.Contains("lama")   ||
+            n.Contains("llama")  || n.Contains("koala")  ||
+            n.Contains("loutre") || n.Contains("otter")) return 0.7f;
+        if (n.Contains("chat")   || n.Contains("cat")   ||
+            n.Contains("lapin")  || n.Contains("rabbit") ||
+            n.Contains("bunne")  || n.Contains("bunny")) return 0.5f;
+        if (n.Contains("poule")  || n.Contains("chick") ||
+            n.Contains("hen")    || n.Contains("canar") ||
+            n.Contains("perro")  || n.Contains("parr")  ||
+            n.Contains("canard") || n.Contains("duck"))  return 0.35f; // ~0,4 m
+        return 1f; // espèce inconnue : taille moyenne, rien ne casse
+    }
+
+    /// <summary>
+    /// Déjà posés (salim 04/10) : les animaux DEJA dans la scène gardent leur
+    /// vieille taille 1,1 m figée → on les re-cale par espèce, à l'identique
+    /// du passage d'installation (mesure hauteur actuelle → hauteur cible).
+    /// Retourne true si au moins un animal a changé de taille.
+    /// </summary>
+    private static bool RenatureTailles(GameObject root)
+    {
+        bool changed = false;
+        foreach (Transform child in root.transform)
+        {
+            float height = BoundsHeight(child.gameObject);
+            if (height < 0.01f) continue;
+
+            string nom = child.name.StartsWith("Animal_")
+                ? child.name.Substring(7) : child.name;
+            float voulu = 1.1f * TailleEspece(nom);
+            if (Mathf.Abs(height - voulu) <= voulu * 0.02f) continue; // déjà bon
+
+            child.transform.localScale *= voulu / height;
+            changed = true;
+        }
+        return changed;
+    }
+
+    /// <summary>
+    /// Déjà posés : repousse l'anneau de balade au-delà de la DIAGONALE du
+    /// carré (les coins !) et replace immédiatement tout animal qui se
+    /// trouverait encore dedans. Retourne true si un Wanderer a été recâlé.
+    /// </summary>
+    private static bool RecaleAnneau(GameObject root)
+    {
+        var spawner = Object.FindFirstObjectByType<BubbleSpawner>();
+        float half = spawner != null ? spawner.arenaSize.x * 0.5f : 14f;
+        float coin = half * 1.4142f;
+        float rMin = coin + 1.2f;
+        float rMax = rMin + 4f;
+
+        bool changed = false;
+        foreach (Wanderer w in root.GetComponentsInChildren<Wanderer>(true))
+        {
+            if (Mathf.Abs(w.ringRadius.x - rMin) > 0.01f ||
+                Mathf.Abs(w.ringRadius.y - rMax) > 0.01f)
+            {
+                w.ringRadius = new Vector2(rMin, rMax);
+                // déjà dehors ? sinon on le re-pose sur son anneau tout de suite
+                float xz = new Vector2(w.transform.position.x,
+                                       w.transform.position.z).magnitude;
+                if (xz < rMin || xz > rMax)
+                {
+                    float ang = Mathf.Atan2(w.transform.position.z,
+                                            w.transform.position.x);
+                    if (xz < 0.01f) ang = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                    float r = Random.Range(rMin, rMax);
+                    w.transform.position = new Vector3(Mathf.Cos(ang) * r,
+                                                       w.transform.position.y,
+                                                       Mathf.Sin(ang) * r);
+                }
+                EditorUtility.SetDirty(w);
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     // ────────────────────────────────────────────────────────────────

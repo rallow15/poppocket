@@ -7278,19 +7278,19 @@ PrefabInstance:
       objectReference: {fileID: 9100000, guid: a2f2ea91112a1d2499c19b2767a3c9f8, type: 2}
     - target: {fileID: 8881504610387854135, guid: 6b0b0b098177a3b439c80991ec9deacc, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2.2466562
+      value: 0.7863296
       objectReference: {fileID: 0}
     - target: {fileID: 8881504610387854135, guid: 6b0b0b098177a3b439c80991ec9deacc, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2.2466562
+      value: 0.7863296
       objectReference: {fileID: 0}
     - target: {fileID: 8881504610387854135, guid: 6b0b0b098177a3b439c80991ec9deacc, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2.2466562
+      value: 0.7863296
       objectReference: {fileID: 0}
     - target: {fileID: 8881504610387854135, guid: 6b0b0b098177a3b439c80991ec9deacc, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -12.2595415
+      value: -16.446028
       objectReference: {fileID: 0}
     - target: {fileID: 8881504610387854135, guid: 6b0b0b098177a3b439c80991ec9deacc, type: 3}
       propertyPath: m_LocalPosition.y
@@ -7298,7 +7298,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8881504610387854135, guid: 6b0b0b098177a3b439c80991ec9deacc, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -14.733061
+      value: -19.764229
       objectReference: {fileID: 0}
     - target: {fileID: 8881504610387854135, guid: 6b0b0b098177a3b439c80991ec9deacc, type: 3}
       propertyPath: m_LocalRotation.w
@@ -7358,7 +7358,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 0.91576433
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -7642,19 +7642,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 33246b64c1371e444b73335f655fc158, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.65275115
+      value: 1.3055022
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 33246b64c1371e444b73335f655fc158, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.65275115
+      value: 1.3055022
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 33246b64c1371e444b73335f655fc158, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.65275115
+      value: 1.3055022
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 33246b64c1371e444b73335f655fc158, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 6.219933
+      value: 7.735304
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 33246b64c1371e444b73335f655fc158, type: 3}
       propertyPath: m_LocalPosition.y
@@ -7662,7 +7662,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 33246b64c1371e444b73335f655fc158, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -18.466253
+      value: -22.965214
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 33246b64c1371e444b73335f655fc158, type: 3}
       propertyPath: m_LocalRotation.w
@@ -7733,7 +7733,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.2072234
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -10398,19 +10398,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: f612768321ebc364fa742fa8bbfadb5e, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.47949392
+      value: 0.8151398
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f612768321ebc364fa742fa8bbfadb5e, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.47949392
+      value: 0.8151398
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f612768321ebc364fa742fa8bbfadb5e, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.47949392
+      value: 0.8151398
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f612768321ebc364fa742fa8bbfadb5e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 15.979287
+      value: 19.681175
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f612768321ebc364fa742fa8bbfadb5e, type: 3}
       propertyPath: m_LocalPosition.y
@@ -10418,7 +10418,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f612768321ebc364fa742fa8bbfadb5e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -11.017978
+      value: -13.570489
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f612768321ebc364fa742fa8bbfadb5e, type: 3}
       propertyPath: m_LocalRotation.w
@@ -10489,7 +10489,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 0.9774126
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -10664,19 +10664,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 605d0caffe3b2fe489bc37e772cb7496, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2.2466562
+      value: 0.7863296
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 605d0caffe3b2fe489bc37e772cb7496, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2.2466562
+      value: 0.7863296
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 605d0caffe3b2fe489bc37e772cb7496, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2.2466562
+      value: 0.7863296
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 605d0caffe3b2fe489bc37e772cb7496, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -12.718019
+      value: -17.565687
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 605d0caffe3b2fe489bc37e772cb7496, type: 3}
       propertyPath: m_LocalPosition.y
@@ -10684,7 +10684,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 605d0caffe3b2fe489bc37e772cb7496, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -13.8089
+      value: -19.072378
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 605d0caffe3b2fe489bc37e772cb7496, type: 3}
       propertyPath: m_LocalRotation.w
@@ -10755,7 +10755,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.2166276
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -15543,19 +15543,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 8739604ff156c91408e3f6352de03dbc, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.7342453
+      value: 1.1013681
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8739604ff156c91408e3f6352de03dbc, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.7342453
+      value: 1.1013681
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8739604ff156c91408e3f6352de03dbc, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.7342453
+      value: 1.1013681
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8739604ff156c91408e3f6352de03dbc, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -14.389286
+      value: -17.273794
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8739604ff156c91408e3f6352de03dbc, type: 3}
       propertyPath: m_LocalPosition.y
@@ -15563,7 +15563,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8739604ff156c91408e3f6352de03dbc, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 13.861187
+      value: 16.639832
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8739604ff156c91408e3f6352de03dbc, type: 3}
       propertyPath: m_LocalRotation.w
@@ -15634,7 +15634,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.298985
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -16553,19 +16553,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6552451252865160180, guid: 8741cd6c8b9fc3947999191d0c381f50, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.7342453
+      value: 1.1013681
       objectReference: {fileID: 0}
     - target: {fileID: 6552451252865160180, guid: 8741cd6c8b9fc3947999191d0c381f50, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.7342453
+      value: 1.1013681
       objectReference: {fileID: 0}
     - target: {fileID: 6552451252865160180, guid: 8741cd6c8b9fc3947999191d0c381f50, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.7342453
+      value: 1.1013681
       objectReference: {fileID: 0}
     - target: {fileID: 6552451252865160180, guid: 8741cd6c8b9fc3947999191d0c381f50, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -14.750461
+      value: -19.147896
       objectReference: {fileID: 0}
     - target: {fileID: 6552451252865160180, guid: 8741cd6c8b9fc3947999191d0c381f50, type: 3}
       propertyPath: m_LocalPosition.y
@@ -16573,7 +16573,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6552451252865160180, guid: 8741cd6c8b9fc3947999191d0c381f50, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 10.158484
+      value: 13.186951
       objectReference: {fileID: 0}
     - target: {fileID: 6552451252865160180, guid: 8741cd6c8b9fc3947999191d0c381f50, type: 3}
       propertyPath: m_LocalRotation.w
@@ -16637,7 +16637,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 0.8247521
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -20908,7 +20908,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3402305891407841116, guid: 15ca4494f24bf9741a48b37ec2c4c632, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -1.4519366
+      value: -1.9527445
       objectReference: {fileID: 0}
     - target: {fileID: 3402305891407841116, guid: 15ca4494f24bf9741a48b37ec2c4c632, type: 3}
       propertyPath: m_LocalPosition.y
@@ -20916,7 +20916,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3402305891407841116, guid: 15ca4494f24bf9741a48b37ec2c4c632, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 18.104115
+      value: 24.34866
       objectReference: {fileID: 0}
     - target: {fileID: 3402305891407841116, guid: 15ca4494f24bf9741a48b37ec2c4c632, type: 3}
       propertyPath: m_LocalRotation.w
@@ -20992,7 +20992,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.0804497
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -21310,7 +21310,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0c0f883d7bc25dd4d84c3c7795a4a332, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -13.607231
+      value: -14.622422
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0c0f883d7bc25dd4d84c3c7795a4a332, type: 3}
       propertyPath: m_LocalPosition.y
@@ -21318,7 +21318,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0c0f883d7bc25dd4d84c3c7795a4a332, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -17.133028
+      value: -18.411272
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0c0f883d7bc25dd4d84c3c7795a4a332, type: 3}
       propertyPath: m_LocalRotation.w
@@ -21389,7 +21389,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.3774341
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -28039,19 +28039,19 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: f6730b960ba6c914e9141395fc93249f, type: 2}
     - target: {fileID: 7922649801668778606, guid: 4ecab060b0afb5d4db61f7f1311b9e24, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.47949392
+      value: 0.8151398
       objectReference: {fileID: 0}
     - target: {fileID: 7922649801668778606, guid: 4ecab060b0afb5d4db61f7f1311b9e24, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.47949392
+      value: 0.8151398
       objectReference: {fileID: 0}
     - target: {fileID: 7922649801668778606, guid: 4ecab060b0afb5d4db61f7f1311b9e24, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.47949392
+      value: 0.8151398
       objectReference: {fileID: 0}
     - target: {fileID: 7922649801668778606, guid: 4ecab060b0afb5d4db61f7f1311b9e24, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -8.154433
+      value: -9.2042465
       objectReference: {fileID: 0}
     - target: {fileID: 7922649801668778606, guid: 4ecab060b0afb5d4db61f7f1311b9e24, type: 3}
       propertyPath: m_LocalPosition.y
@@ -28059,7 +28059,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7922649801668778606, guid: 4ecab060b0afb5d4db61f7f1311b9e24, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 20.527664
+      value: 23.170424
       objectReference: {fileID: 0}
     - target: {fileID: 7922649801668778606, guid: 4ecab060b0afb5d4db61f7f1311b9e24, type: 3}
       propertyPath: m_LocalRotation.w
@@ -28123,7 +28123,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.4258775
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -29317,7 +29317,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2197702747431416007, guid: 66f01a8db88f9644baed659d1f91cdca, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -18.719397
+      value: -23.69334
       objectReference: {fileID: 0}
     - target: {fileID: 2197702747431416007, guid: 66f01a8db88f9644baed659d1f91cdca, type: 3}
       propertyPath: m_LocalPosition.y
@@ -29325,7 +29325,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2197702747431416007, guid: 66f01a8db88f9644baed659d1f91cdca, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 6.4483542
+      value: 8.161751
       objectReference: {fileID: 0}
     - target: {fileID: 2197702747431416007, guid: 66f01a8db88f9644baed659d1f91cdca, type: 3}
       propertyPath: m_LocalRotation.w
@@ -29393,7 +29393,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.3329881
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -30581,7 +30581,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 31d2c91682ac6f045b4b75ebf27e5d77, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 17.385622
+      value: 20.69839
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 31d2c91682ac6f045b4b75ebf27e5d77, type: 3}
       propertyPath: m_LocalPosition.y
@@ -30589,7 +30589,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 31d2c91682ac6f045b4b75ebf27e5d77, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 13.573594
+      value: 16.159994
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 31d2c91682ac6f045b4b75ebf27e5d77, type: 3}
       propertyPath: m_LocalRotation.w
@@ -30660,7 +30660,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.0748702
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -30958,7 +30958,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a2ef474392ac74f409c70c61ccb6c24a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -18.828703
+      value: -23.327951
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a2ef474392ac74f409c70c61ccb6c24a, type: 3}
       propertyPath: m_LocalPosition.y
@@ -30966,7 +30966,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a2ef474392ac74f409c70c61ccb6c24a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 6.459881
+      value: 8.003513
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a2ef474392ac74f409c70c61ccb6c24a, type: 3}
       propertyPath: m_LocalRotation.w
@@ -31037,7 +31037,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.041338
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -31488,19 +31488,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4483999970917742656, guid: dfb23d60f30c46847ba7815aa09e2567, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.65275115
+      value: 1.3055022
       objectReference: {fileID: 0}
     - target: {fileID: 4483999970917742656, guid: dfb23d60f30c46847ba7815aa09e2567, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.65275115
+      value: 1.3055022
       objectReference: {fileID: 0}
     - target: {fileID: 4483999970917742656, guid: dfb23d60f30c46847ba7815aa09e2567, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.65275115
+      value: 1.3055022
       objectReference: {fileID: 0}
     - target: {fileID: 4483999970917742656, guid: dfb23d60f30c46847ba7815aa09e2567, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -17.889215
+      value: -23.5543
       objectReference: {fileID: 0}
     - target: {fileID: 4483999970917742656, guid: dfb23d60f30c46847ba7815aa09e2567, type: 3}
       propertyPath: m_LocalPosition.y
@@ -31508,7 +31508,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4483999970917742656, guid: dfb23d60f30c46847ba7815aa09e2567, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 7.4127407
+      value: 9.760178
       objectReference: {fileID: 0}
     - target: {fileID: 4483999970917742656, guid: dfb23d60f30c46847ba7815aa09e2567, type: 3}
       propertyPath: m_LocalRotation.w
@@ -31572,7 +31572,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.0649306
   bobAmplitude: 0.02
   bobSpeed: 7
@@ -33585,7 +33585,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6020308598444310925, guid: 44a0de0f766c9634eb66f1d56b7edc9d, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.22696215
+      value: -0.28737453
       objectReference: {fileID: 0}
     - target: {fileID: 6020308598444310925, guid: 44a0de0f766c9634eb66f1d56b7edc9d, type: 3}
       propertyPath: m_LocalPosition.y
@@ -33593,7 +33593,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6020308598444310925, guid: 44a0de0f766c9634eb66f1d56b7edc9d, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -18.239128
+      value: -23.09388
       objectReference: {fileID: 0}
     - target: {fileID: 6020308598444310925, guid: 44a0de0f766c9634eb66f1d56b7edc9d, type: 3}
       propertyPath: m_LocalRotation.w
@@ -33661,7 +33661,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f92442ee542354c9259997d77eac08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wanderer
-  ringRadius: {x: 17.3, y: 23}
+  ringRadius: {x: 22.413, y: 26.413}
   speed: 1.0598018
   bobAmplitude: 0.02
   bobSpeed: 7

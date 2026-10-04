@@ -54,6 +54,39 @@ public class EclatEau : MonoBehaviour
     // JAMAIS touché, règle du projet). Texture en mémoire une seule fois.
     private static Material matBoulePack;
 
+    // CLEAN FPS (salim 05/10) : plus de « new Material » à CHAQUE pop
+    // (2-3 matériaux jetés à la poubelle mémoire par pop × 400 pops/round
+    // = des sacs de GC en pleine partie).
+    //  → le shader est cherché UNE seule fois,
+    //  → le matériau des gouttes (jamais animé) est PARTAGÉ,
+    //  → les matériaux des 2 quads animés (vaguelette / éclat) sont
+    //    EMPRUNTÉS dans un petit pool puis RENDUS à la fin de leur
+    //    animation → zéro création pendant le jeu.
+    private static Shader shSprites;
+    private static Material matGoutte;
+    private static readonly System.Collections.Generic.Queue<Material> poolVague
+        = new System.Collections.Generic.Queue<Material>();
+    private static readonly System.Collections.Generic.Queue<Material> poolEclat
+        = new System.Collections.Generic.Queue<Material>();
+
+    /// <summary>Cherche le shader une fois, puis le garde (Shader.Find = cherchette à chaque appel).</summary>
+    private static Shader SpritesShader()
+    {
+        if (shSprites == null) shSprites = Shader.Find("Sprites/Default");
+        return shSprites;
+    }
+
+    /// <summary>Prend un matériau au pool (créé UNE fois), avec la texture et la queue demandées.</summary>
+    private static Material Emprunter(System.Collections.Generic.Queue<Material> pool,
+                                      Texture2D tex, int renderQueue)
+    {
+        if (pool.Count > 0) return pool.Dequeue();          // réutilisé tel quel
+        var m = new Material(SpritesShader());
+        m.mainTexture = tex;
+        m.renderQueue = renderQueue;
+        return m;
+    }
+
     /// <summary>
     /// Répare un prefab du pack NamuFX : son shader ne marche pas en
     /// Built-in (matériau ROSE). On pose un shader Built-in + le dessin
@@ -184,9 +217,14 @@ public class EclatEau : MonoBehaviour
         // renderer : texture RONDE en code (pas le carré d'Unity) + mode
         // Stretch → la goutte s'étire dans sa course, vrai look d'eau
         var rend = ps.GetComponent<ParticleSystemRenderer>();
-        var mat = new Material(Shader.Find("Sprites/Default"));
-        mat.mainTexture = TexGoutte();
-        rend.material = mat;
+        // CLEAN FPS : matériau des gouttes créé UNE fois puis réutilisé
+        // à chaque pop (il n'est jamais animé, il peut être partagé).
+        if (matGoutte == null)
+        {
+            matGoutte = new Material(SpritesShader());
+            matGoutte.mainTexture = TexGoutte();
+        }
+        rend.material = matGoutte;
         rend.renderMode = ParticleSystemRenderMode.Stretch;
         rend.lengthScale  = 1.2f;
         rend.velocityScale = 0.30f;
@@ -207,11 +245,9 @@ public class EclatEau : MonoBehaviour
         vague.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
         Object.Destroy(vague, 1.0f);                      // nettoyage de sécurité
 
-        // matériau cloné EN MÉMOIRE (jamais de .mat sur disque — règle) :
-        // c'est lui qu'on anime (s'étend + s'efface)
-        var matVague = new Material(rend.material);   // clone de Sprites/Default
-        matVague.mainTexture = TexVaguelette();
-        matVague.renderQueue = 2995;                  // après le sol, sous les bulles
+        // CLEAN FPS : on EMPRUNTE un matériau du pool au lieu d'en créer
+        // un neuf à chaque pop (il est rendu au pool à la fin de l'anim).
+        var matVague = Emprunter(poolVague, TexVaguelette(), 2995);
         vague.GetComponent<Renderer>().material = matVague;
 
         StartCoroutine(AnimerVaguelette(vague.transform, matVague));
@@ -227,9 +263,8 @@ public class EclatEau : MonoBehaviour
             eclat.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
             eclat.transform.position = new Vector3(transform.position.x, ySol + 0.014f, transform.position.z);
             eclat.transform.localScale = new Vector3(0.55f, 0.55f, 1f);
-            var matEclat = new Material(Shader.Find("Sprites/Default"));
-            matEclat.mainTexture = texEclat;
-            matEclat.renderQueue = 2996;          // juste au-dessus de la vaguelette
+            // CLEAN FPS : idem, matériau EMPRUNTÉ au pool puis rendu.
+            var matEclat = Emprunter(poolEclat, texEclat, 2996);
             eclat.GetComponent<Renderer>().material = matEclat;
             Object.Destroy(eclat, 0.7f);          // nettoyage de sécurité
             StartCoroutine(AnimerEclat(eclat.transform, matEclat));
@@ -251,6 +286,7 @@ public class EclatEau : MonoBehaviour
             mat.color = c;
             yield return null;
         }
+        poolEclat.Enqueue(mat);              // CLEAN FPS : rendu au pool
     }
 
     /// <summary>La vaguelette S'ÉTEND (0.5 → 1.6 m) et S'EFFACE en 0,45 s.</summary>
@@ -270,5 +306,6 @@ public class EclatEau : MonoBehaviour
             mat.color = eau;
             yield return null;
         }
+        poolVague.Enqueue(mat);              // CLEAN FPS : rendu au pool
     }
 }

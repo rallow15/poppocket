@@ -109,6 +109,11 @@ public class GameManager : MonoBehaviour
             sc.isPlayer = isPlayer;
             sc.slimeIndex = i;
 
+            // NIVEAUX (salim 04/10) : les bots du niveau choisi sont PLUS FORTS
+            // (+7 % de force par niveau, plafonnés à ×1.5 — réglé au spawn,
+            // avant le Start du driver d'animation, donc tout est cohérent).
+            if (isPlayer == false) sc.AppliquerNiveau(ProgresseurJeu.Choisi);
+
             // Le préfab IA arrive déjà correctement, le joueur aussi,
             // mais on s'assure du booléen par sécurité.
             allSlimes[i] = sc;
@@ -192,6 +197,11 @@ public class GameManager : MonoBehaviour
                 string winnerName = winnerIndex == 0
                     ? Trad.T("TOI", "YOU")
                     : $"Bot {winnerIndex}";
+
+                // NIVEAUX (salim 04/10) : si c'est TOI le gagnant de la
+                // partie complète, le niveau suivant est DÉBLOQUÉ
+                // (les bots y seront plus forts).
+                if (winnerIndex == 0) ProgresseurJeu.PasserNiveauSuivant();
 
                 gameUI.ShowWinner(winnerName, winnerScore);
             }

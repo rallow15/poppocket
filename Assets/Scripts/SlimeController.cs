@@ -19,7 +19,7 @@ public class SlimeController : MonoBehaviour
 
     [Header("Mouvement joueur")]
     [Tooltip("Accélération du joueur (m/s²) — ForceMode.Acceleration = indépendant de la masse")]
-    public float playerForce = 60f;
+    public float playerForce = 38f;
     [Tooltip("Vitesse du saut du joueur (tap court = saut)")]
     public float jumpForce = 7f;
     [Tooltip("Force de squash appliquée en mouvement (effet satisfaisant)")]
@@ -50,6 +50,14 @@ public class SlimeController : MonoBehaviour
     private Transform currentTarget;    // bulle chassée par l'IA
     private float nextRetargetTime;     // hésitation IA
     private Vector3 squashBaseScale;    // scale d'origine pour le squash
+    private float squashVise;           // écrasement visé, décidé dans FixedUpdate (0 = repos)
+    private float squashActuel;         // écrasement appliqué, lissé dans Update
+
+    // CLEAN FPS (salim 05/10) : le radar des bots réutilise CE tableau au
+    // lieu d'en fabriquer un neuf à chaque recherche (l'ancien OverlapSphere
+    // allouait puis jetait un tableau sans arrêt → poubelle mémoire en jeu).
+    // 512 cases = même la totalité du tapis de bulles au niveau radar max.
+    private static readonly Collider[] hitsRadar = new Collider[512];
 
     // Joystick du Joystick Pack (Fenerax) — référencé FAIBLEMENT (MonoBehaviour +
     // reflection sur la propriété Direction) pour que le projet compile AVANT
@@ -74,6 +82,14 @@ public class SlimeController : MonoBehaviour
         // la perdre, même si Unity re-écrit le préfab.
         if (isPlayer == false && botForce < 32f) botForce = 32f;
 
+        // FLUIDITÉ (salim 04/10) : le joueur allait trop vite (60) — ça
+        // "tapait" au lieu de glisser et le squash saccadait. 38 = feeling
+        // Voodoo, coulée douce. Forcé comme le botForce : le préfab peut
+        // garder l'ancienne valeur sérialisée, on la corrige à l'exécution.
+        // Les bots, eux, ne bougent PAS : sous ~2 m/s ils n'éclatent plus
+        // les bulles, il faut les garder accélérés.
+        if (isPlayer && playerForce > 40f) playerForce = 38f;
+
         // FLUIDITÉ : le Rigidbody est interpolé entre 2 pas de physique
         // → le slime glisse à l'écran au lieu de "sautiller" à 60 Hz fixes.
         rb.interpolation = RigidbodyInterpolation.Interpolate;
@@ -96,6 +112,20 @@ public class SlimeController : MonoBehaviour
                 consumeJump = t.GetMethod("ConsumeJump");
             }
         }
+    }
+
+    // FLUIDITÉ (salim 04/10) : le squash (taille du corps) était lissé dans
+    // FixedUpdate (50 Hz) alors que l'image tourne à 60 Hz → la taille
+    // sautait par crans visibles. Désormais la CIBLE est calculée dans
+    // FixedUpdate et l'échelle est appliquée ICI, au rythme de l'image = lisse.
+    private void Update()
+    {
+        squashActuel = Mathf.Lerp(squashActuel, squashVise, Time.deltaTime * 10f);
+        Vector3 cible = squashBaseScale;
+        cible.x *= 1f - squashActuel;
+        cible.y *= 1f + squashActuel;
+        cible.z *= 1f - squashActuel;
+        transform.localScale = cible;
     }
 
     private void FixedUpdate()
@@ -141,15 +171,16 @@ public class SlimeController : MonoBehaviour
         Vector2 input = Vector2.zero;
         bool hasInput = false;
 
-        if (joystickSource != null)
+        if (joystickSource != null && directionProp != null)
         {
-            // Direction est un Vector2 (-1..1) exposé par le Joystick Pack
-            System.Type t = joystickSource.GetType();
-            var prop = t.GetProperty("Direction");
-            if (prop != null)
+            // Direction est un Vector2 (-1..1) exposé par le Joystick Pack.
+            // FLUIDITÉ (salim 05/10) : la propriété est mise en cache dans
+            // Start() — on ne la re-cherche PLUS à chaque pas de physique
+            // (50 re-cherches/seconde = du gaspillage + de la mémoire jetée).
+            if (directionProp.GetValue(joystickSource) is Vector2 v)
             {
-                object val = prop.GetValue(joystickSource, null);
-                if (val is Vector2 v) { input = v; hasInput = true; }
+                input = v;
+                hasInput = true;
             }
         }
 
@@ -242,9 +273,13 @@ public class SlimeController : MonoBehaviour
     /// <summary>
     /// PROGRESSION (demande de salim, 03/10) : « les bots légèrement
     /// plus fort » quand on monte de niveau. Chaque niveau :
-    ///   • bots +18 % plus rapides (plafonné à ×2 pour rester fair-play)
-    ///   • ils hésitent 15 % moins longtemps (réaction plus vive)
-    ///   • leur radar de bulles s'élargit un peu
+    ///   • bots +7 % plus rapides (plafonné à ×1.5 pour rester GAGNABLE :
+    ///     salim 04/10 « fais en sorte que c'est possible qu'un humain gagne »
+    ///     — à fond, un bot va à ×1.5, jamais presque ×2 comme avant)
+    ///   • ils hésitent un peu moins longtemps (réaction plus vive, mais
+    ///     jamais < 0.9 s : un bot « ultra » reste assez lent pour être
+    ///     battu par un humain qui pousse en ligne droite)
+    ///   • leur radar de bulles s'élargit un peu (plafonné à 42)
     /// Appelé par GameManager.SpawnSlimes sur CHAQUE bot, au spawn.
     /// Le joueur, lui, ne change jamais : c'est l'arène qui devient
     /// plus dure, pas ton slime plus rapide.
@@ -252,10 +287,10 @@ public class SlimeController : MonoBehaviour
     public void AppliquerNiveau(int niveau)
     {
         if (niveau <= 1) return;
-        float forceMul = Mathf.Min(1f + 0.18f * (niveau - 1), 2f);
+        float forceMul = Mathf.Min(1f + 0.07f * (niveau - 1), 1.5f);
         botForce *= forceMul;
-        retargetDelay = Mathf.Max(0.4f, retargetDelay * (1f - 0.15f * (niveau - 1)));
-        detectionRadius = Mathf.Min(detectionRadius * (1f + 0.15f * (niveau - 1)), 55f);
+        retargetDelay = Mathf.Max(0.9f, retargetDelay * (1f - 0.06f * (niveau - 1)));
+        detectionRadius = Mathf.Min(detectionRadius * (1f + 0.08f * (niveau - 1)), 42f);
     }
 
     /// <summary>
@@ -317,13 +352,18 @@ public class SlimeController : MonoBehaviour
         // projet, on cherche dans tout (fallback pour que les bots jouent quand même)
         int bubbleLayer = LayerMask.NameToLayer("Bubble");
         int bubbleMask = bubbleLayer >= 0 ? (1 << bubbleLayer) : ~0;
-        Collider[] hits = Physics.OverlapSphere(transform.position, detectionRadius, bubbleMask);
+
+        // CLEAN FPS (salim 05/10) : OverlapSphereNonAlloc remplit NOTRE
+        // tableau au lieu d'en créer un neuf à chaque recherche.
+        int nb = Physics.OverlapSphereNonAlloc(transform.position,
+                                               detectionRadius, hitsRadar, bubbleMask);
 
         Transform nearest = null;
         float bestDist = float.MaxValue;
 
-        foreach (Collider col in hits)
+        for (int i = 0; i < nb; i++)
         {
+            Collider col = hitsRadar[i];
             // Ignore les bulles déjà en train d'éclater
             if (col.GetComponent<Bubble>() == null) continue;
 
@@ -352,21 +392,15 @@ public class SlimeController : MonoBehaviour
     // ────────────────────────────────────────────────────────────────
     private void ApplySquash(float intensity)
     {
-        float squash = Mathf.Clamp01(intensity) * squashMagnitude;
-        // Multiplié composant par composant (Vector3 * Vector3 n'existe pas en C#)
-        Vector3 squashed;
-        squashed.x = squashBaseScale.x * (1f - squash);
-        squashed.y = squashBaseScale.y * (1f + squash);
-        squashed.z = squashBaseScale.z * (1f - squash);
-        transform.localScale = Vector3.Lerp(
-            transform.localScale, squashed,
-            Time.fixedDeltaTime * 12f);
+        // FLUIDITÉ (salim 04/10) : on NE touche PLUS l'échelle ici — on
+        // enregistre juste la cible, c'est Update() qui l'applique chaque
+        // image (60 Hz au lieu de 50 ⇒ fini les sproings par crans).
+        squashVise = Mathf.Clamp01(intensity) * squashMagnitude;
     }
 
     private void ResetSquash()
     {
-        transform.localScale = Vector3.Lerp(
-            transform.localScale, squashBaseScale, Time.fixedDeltaTime * 10f);
+        squashVise = 0f;
     }
 
     /// <summary>Appelé par GameManager pour réinitialiser la position au début d'un round.</summary>
@@ -376,12 +410,25 @@ public class SlimeController : MonoBehaviour
         rb.linearVelocity = Vector3.zero;   // Unity 6 (Rigidbody.linearVelocity)
         rb.angularVelocity = Vector3.zero;
         transform.position = spawnPos;
-        transform.localScale = squashBaseScale;
         currentTarget = null;
 
-        // Nettoie tous les effets power-up au début d'un nouveau round
+        // FIX BUG GÉANT (salim 02/10) : si le round finit pendant que le
+        // champignon est actif, on désactive le géant AVANT de poser la
+        // taille — sinon on ré-appliquait le scale ×3 et le slime restait
+        // géant tout le round suivant (TickGiant ne le rattrapait jamais,
+        // giantActive étant déjà repassé à false).
         speedUntil = giantUntil = stunnedUntil = -1f;
         if (giantActive) { giantActive = false; squashBaseScale /= 3f; }
+
+        // FIX TAILLE À L'ENTRÉE DANS L'ARÈNE (salim 04/10 : « les animaux
+        // sont pas à la taille normale ») : en fin de round le slime roulait
+        // encore, donc squashActuel était resté positif (jusqu'à 0,15 =
+        // +15 % de haut, -15 % de large). ResetToSpawn posait la bonne
+        // taille, mais l'image d'après le Update() la ré-écrasait en repartant
+        // de CE vieux squash → le slime entrait étiré/écrasé. On repart à zéro.
+        squashVise = 0f;
+        squashActuel = 0f;
+        transform.localScale = squashBaseScale;
         smoothInput = Vector2.zero;   // on repart du repos (pas de glisse fantôme)
     }
 }

@@ -153,9 +153,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4dd217537f19fad4c80791de4189747d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bubble
-  minImpactVelocity: 1.2
+  minImpactVelocity: 2
   popSounds:
   - {fileID: 8300000, guid: ea314951d10114d4a8142aa5b2814168, type: 3}
   popParticlePrefab: {fileID: 912203628382342760, guid: 81644ce05795fb445879fd981f963bc7, type: 3}
   minPitch: 0.85
   maxPitch: 1.15
+  teinteEau: {r: 0.62, g: 0.9, b: 0.98, a: 1}
+  squashTime: 0.08
+  squashHeight: 0.5
+  squashWidth: 1.15

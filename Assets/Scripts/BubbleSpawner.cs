@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// Construit le "tapis de bulles" façon Roblox : une grille dense de petites
@@ -43,23 +44,27 @@ public class BubbleSpawner : MonoBehaviour
     /// <summary>GameManager appelle cette méthode à chaque round (nom conservé).</summary>
     public void SpawnBubblesForRound()
     {
-        // 1) Nettoyage des vieilles bulles
-        if (bubbleContainer != null)
-        {
-            foreach (Transform child in bubbleContainer)
-                Destroy(child.gameObject);
-        }
-
-        // Crée le container au besoin
+        // FLUIDITÉ (salim 05/10) : on ne détruit PLUS le tapis puis on le
+        // recrée (400 Destroy + 400 CreatePrimitive en une frame = pic de
+        // mémoire et l'image accroche au début de chaque round, surtout sur
+        // téléphone). Les bulles vivantes sont REMISES À NEUF et REPLACÉES
+        // dans la grille (pool maison) : on ne crée que la différence.
         if (bubbleContainer == null)
         {
             GameObject go = new GameObject("Bubbles");
             bubbleContainer = go.transform;
         }
 
+        List<Bubble> recyclables = new List<Bubble>();
+        foreach (Bubble b in bubbleContainer.GetComponentsInChildren<Bubble>(true))
+        {
+            b.RemiseAZero();
+            recyclables.Add(b);
+        }
+
         EnsureMaterial();
 
-        // 2) Grille régulière façon film à bulles : rangées décalées (quinconce)
+        // Grille régulière façon film à bulles : rangées décalées (quinconce)
         float halfX = arenaSize.x * 0.5f;
         float halfZ = arenaSize.y * 0.5f;
         float cellX = arenaSize.x / bubblesPerSide;
@@ -67,6 +72,7 @@ public class BubbleSpawner : MonoBehaviour
         int layerBubble = LayerMask.NameToLayer("Bubble");
 
         int spawned = 0;
+        int suivante = 0;   // prochaine bulle du pool à reprendre
         for (int row = 0; row < bubblesPerSide; row++)
         {
             // Quinconce : une rangée sur deux est décalée d'une demi-cellule
@@ -84,74 +90,103 @@ public class BubbleSpawner : MonoBehaviour
                 // aurait dit un truc posé ») : la bulle est posée un peu
                 // PLUS BAS que son centre exact → le bas rentre dans le
                 // sol, elle vit DANS le tapis au lieu de flotter.
-                SpawnDome(new Vector3(x, domeScaleY * 0.40f, z), layerBubble);
+                Bubble aRecycler = suivante < recyclables.Count
+                    ? recyclables[suivante++] : null;
+                SpawnDome(new Vector3(x, domeScaleY * 0.40f, z), layerBubble, aRecycler);
                 spawned++;
             }
         }
 
-        Debug.Log($"[BubbleSpawner] Tapis de bulles : {spawned} mini-bulles posées au sol.");
+        // Vieilles bulles en trop (grille rétrécie) : on les retire d'un coup
+        for (; suivante < recyclables.Count; suivante++)
+            Destroy(recyclables[suivante].gameObject);
+
+        Debug.Log($"[BubbleSpawner] Tapis de bulles : {spawned} mini-bulles posées au sol " +
+                  $"({recyclables.Count} recyclées).");
     }
 
     // ────────────────────────────────────────────────────────────────
     //  CRÉATION D'UNE MINI-BULLE 3D
     // ────────────────────────────────────────────────────────────────
-    private void SpawnDome(Vector3 pos, int layerBubble)
+    private void SpawnDome(Vector3 pos, int layerBubble, Bubble aRecycler = null)
     {
-        // Sphère primitive = MeshRenderer + MeshFilter déjà prêts
-        GameObject dome = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        // PetiteVariation : chaque bulle a une taille un peu différente
+        // (tapis de film à bulles RÉEL : pas un millier de clones identiques)
+        float vari = Random.Range(0.85f, 1.05f);
 
-        // On remplace le collider par un rayon réglé
-        Destroy(dome.GetComponent<SphereCollider>());
-        SphereCollider sc = dome.AddComponent<SphereCollider>();
-        sc.radius = 0.5f;
-        sc.center = Vector3.zero;
-        // BULLE D'EAU FLUIDE : trigger = le slime ne se cogne JAMAIS dedans.
-        // Il roule à travers, la bulle éclate au contact (détecté par OnTriggerEnter).
-        sc.isTrigger = true;
+        GameObject dome;
+        MeshRenderer mrenderer;
+        Bubble bub;
 
-        MeshRenderer mrenderer = dome.GetComponent<MeshRenderer>();
+        if (aRecycler != null)
+        {
+            // POOL (salim 05/10) : l'objet existe déjà — collider, script
+            // Bubble, ombre-enfant… tout est conservé, on ne déplace que lui.
+            dome = aRecycler.gameObject;
+            mrenderer = dome.GetComponent<MeshRenderer>();
+            bub = aRecycler;
+
+            // CLEAN FPS (salim 04/10) : les anciennes bulles créées avec une
+            // ombre-enfant (le "Quad") la perdent définitivement au recyclage.
+            for (int e = dome.transform.childCount - 1; e >= 0; e--)
+            {
+                Transform enfant = dome.transform.GetChild(e);
+                if (enfant.name == "Quad")
+                    Destroy(enfant.gameObject);
+            }
+        }
+        else
+        {
+            // Sphère primitive = MeshRenderer + MeshFilter déjà prêts
+            dome = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
+            // On remplace le collider par un rayon réglé
+            Destroy(dome.GetComponent<SphereCollider>());
+            SphereCollider sc = dome.AddComponent<SphereCollider>();
+            sc.radius = 0.5f;
+            sc.center = Vector3.zero;
+            // BULLE D'EAU FLUIDE : trigger = le slime ne se cogne JAMAIS dedans.
+            // Il roule à travers, la bulle éclate au contact (détecté par OnTriggerEnter).
+            sc.isTrigger = true;
+
+            mrenderer = dome.GetComponent<MeshRenderer>();
+
+            // FLUIDITÉ FPS, façon Voodoo (salim 04/10) : PLUS d'ombre par
+            // bulle. 400 quads d'ombre = 400 draw calls en plus À CHAQUE
+            // image ; sur téléphone c'est l'ennemi n°1 du framerate. La
+            // bulle garde son relief 3D, c'est le sol qui fait le travail.
+            // (les ombres restantes des vieilles bulles sont purgées au
+            // recyclage, voir plus haut).
+
+            // Le script Bubble fait le pop : son + particules + score
+            bub = dome.AddComponent<Bubble>();
+            if (settingsSource != null)
+            {
+                bub.minImpactVelocity = settingsSource.minImpactVelocity;
+                bub.popSounds = settingsSource.popSounds;
+                bub.popParticlePrefab = settingsSource.popParticlePrefab;
+                bub.minPitch = settingsSource.minPitch;
+                bub.maxPitch = settingsSource.maxPitch;
+            }
+
+            if (layerBubble >= 0) dome.layer = layerBubble;
+        }
+
         int choisi = domeMaterials != null && domeMaterials.Length > 0
             ? Random.Range(0, domeMaterials.Length) : -1;
         mrenderer.sharedMaterial = choisi >= 0 ? domeMaterials[choisi] : null;
 
-        // PetiteVariation : chaque bulle a une taille un peu différente
-        // (tapis de film à bulles RÉEL : pas un millier de clones identiques)
-        float vari = Random.Range(0.85f, 1.05f);
+        // FLUIDITÉ FPS : la bulle ne projette PLUS d'ombre temps réel (le
+        // shader transparent projette une ombre pleine = 400 objets re-
+        // dessinés pour le sol d'ombre chaque image). Elle REÇOIT toujours
+        // l'ombre de la lumière : le rendu reste joli, le GPU respire.
+        mrenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
         dome.transform.localScale = new Vector3(domeScaleXZ * vari, domeScaleY * 0.92f, domeScaleXZ * vari);
         dome.transform.position = pos;
         dome.transform.SetParent(bubbleContainer, true);
+        bub.PoseEchelleDeBase();   // le squish/regonfle repart de CETTE taille
 
-        // OMBRE DE CONTACT : un rond sombre doux posé sur le sol DERRIÈRE la
-        // bulle. La bulle « touche » le sol au lieu de flotter au-dessus.
-        GameObject ombre = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        Destroy(ombre.GetComponent<Collider>());
-        UnityEngine.MeshFilter mf = ombre.GetComponent<MeshFilter>();
-        Vector3 tailleMesh = mf != null && mf.sharedMesh != null
-            ? mf.sharedMesh.bounds.size : Vector3.one;
-        ombre.GetComponent<MeshRenderer>().sharedMaterial =
-            ArenaDesign.MatOmbreBulle();
-        ombre.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);   // face vers le haut
-        float tailleOmbre = domeScaleXZ * vari * 1.6f;
-        ombre.transform.localScale = new Vector3(tailleOmbre / tailleMesh.x,
-                                                 tailleOmbre / tailleMesh.y, 1f);
-        ombre.transform.position = new Vector3(pos.x, 0.012f, pos.z);
-        // ENFANT de la bulle (pas du container) : au pop (.Destroy(gameObject)
-        // dans Bubble.cs), l'ombre part AVEC elle — jamais d'ombre orpheline.
-        // En plus, elle squishe pendant l'écrasement : encore plus réaliste.
-        ombre.transform.SetParent(dome.transform, true);
-
-        if (layerBubble >= 0) dome.layer = layerBubble;
-
-        // Le script Bubble fait le pop : son + particules + score
-        Bubble bub = dome.AddComponent<Bubble>();
-        if (settingsSource != null)
-        {
-            bub.minImpactVelocity = settingsSource.minImpactVelocity;
-            bub.popSounds = settingsSource.popSounds;
-            bub.popParticlePrefab = settingsSource.popParticlePrefab;
-            bub.minPitch = settingsSource.minPitch;
-            bub.maxPitch = settingsSource.maxPitch;
-        }
         // salim 04/10 : les gouttes de l'éclat prennent la couleur de
         // CETTE bulle (chacune des 3 teintes d'eau passe ses gouttes)
         if (mrenderer.sharedMaterial != null)

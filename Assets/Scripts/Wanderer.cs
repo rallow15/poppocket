@@ -37,6 +37,20 @@ public class Wanderer : MonoBehaviour
     {
         baseY = transform.position.y;
 
+        // FIX ARÈNE (salim 04/10 : « les animaux rentrent dans l'arène ») :
+        // l'arène est un CARRÉ — ses COINS sont plus loin du centre que son
+        // demi-côté. L'anneau réglé juste au-delà du demi-côté (16 m) passait
+        // par-DESSUS les coins (à 19,8 m) : près d'un coin, l'animal marchait
+        // À L'INTÉRIEUR de l'arène. On repousse donc l'anneau au-delà de la
+        // DIAGONALE du carré, à chaque lancement (la scène peut garder l'ancien
+        // rayon sérialisé, on le corrige ici à l'exécution = règle du projet).
+        var spawner = FindFirstObjectByType<BubbleSpawner>();
+        float half = spawner != null ? spawner.arenaSize.x * 0.5f : 14f;
+        float coin = half * 1.4142f;                       // demi-diagonale du carré
+        float rMin = Mathf.Max(ringRadius.x, coin + 1.2f);
+        float rMax = Mathf.Max(ringRadius.y, rMin + 2f);
+        ringRadius = new Vector2(rMin, rMax);
+
         // Départ sur l'anneau (sécurité : on ne peut JAMAIS être dedans)
         angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
         radius = Random.Range(ringRadius.x, ringRadius.y);
